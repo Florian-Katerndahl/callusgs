@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "callusgs"
+version = "0.1.0"
+description = "Implementation of USGS's machine-to-machine API"
+authors = ["Florian-Katerndahl <florian@katerndahl.com>"]
+license = "GPL-2.0-only"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+requests = "^2.32.3"
+shapely = "^2.0.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
