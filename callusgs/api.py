@@ -8,7 +8,7 @@ import sys
 import warnings
 import requests
 
-from callusgs.types import UserContext
+from callusgs.types import UserContext, SortCustomization, SceneFilter
 
 class Api:
     ENDPOINT: str = "https://m2m.cr.usgs.gov/api/api/json/stable/"
@@ -19,9 +19,37 @@ class Api:
         self.headers: Dict[str, str] = None
 
     
-    def _call(self, url: str):
-        # TODO should check if 2 hours have passed since login_timestamp was set. => see docstring of login method
-        pass
+    def _call_get(self, endpoint: str, conversion: Optional[Literal["text", "binary"]] = "text", /, **kwargs) -> Dict:
+        """
+        Abstract method to call API endpoints
+
+        :param endpoint: Endpoint to call
+        :type endpoint: str
+        :param conversion: How respinse should be interpreted, defaults to "text"
+        :type conversion: Optional[Literal["text", "binary"]], optional
+        :raises RuntimeError: If login is older than two hours, the api token used is not valid anymore
+        :raises AttributeError: Paramter passed onto 'conversion' must be either 'text' or 'binary'
+        :raises HTTPError:
+        :return: Complete API response dictionary
+        :rtype: Dict
+        """        
+        if (datetime.now() - self.login_timestamp).hour >= 2:
+            raise RuntimeError("Two hours have passed since you logged in, api session token expired. Please login again!")
+        
+        with requests.get(Api.ENDPOINT + endpoint, **kwargs) as r:
+            if conversion == "text":
+                message_content: Dict = loads(r.text)
+            elif conversion == "binary":
+                message_content: Dict = loads(r.content)
+            else:
+                raise AttributeError(f"conversion paramter must be either 'text' or 'binary'. Got {conversion}.")
+            
+            if message_content["errorCode"] is not None:
+                print(f"{message_content['errorCode']}: {message_content['errorMessage']}", file=sys.stderr)
+
+            _ = r.raise_for_status()
+
+        return message_content
 
 
     def check_login_timestamp(self, *args, **kwargs) -> Any:
@@ -33,6 +61,7 @@ class Api:
 
     
     def dataset(self):
+        # Input datasetId or datasetName and get dataset description (including the respective other part)
         pass
 
 
@@ -77,6 +106,7 @@ class Api:
 
 
     def dataset_search(self):
+        # can be used to transfrom "natural language description" to datasetId
         pass
 
 
@@ -333,12 +363,14 @@ class Api:
         
         items_to_add: int = 1 if entity_ids is None else len(entity_ids)
         if message_content["data"] != items_to_add:
-            raise RuntimeError(f"Number of scenes added {message_content["data"]} does not equal provided number of scenes {items_to_add}")
+            raise RuntimeError(f"Number of scenes added {message_content['data']} does not equal provided number of scenes {items_to_add}")
 
 
     def scene_list_get(self, list_id: str, dataset_name: Optional[str], starting_number: Optional[int], max_results: Optional[int]) -> List[Dict]:
         """
-        Returns items in the given scene list. 
+        Returns items in the given scene list.
+
+        .. note:: starting_number is 1-indexed
 
         :param list_id: User defined name for the list
         :type list_id: str
@@ -459,27 +491,288 @@ class Api:
         return message_content["data"]
 
 
-    def scene_metadata(self):
-        pass
+    def scene_metadata(self, dataset_name: str, entity_id: str, id_type: Optional[str] = "entityId", metadata_type: Optional[str] = None, include_null_metadata: Optional[bool] = None, use_customization: Optional[bool] = None) -> Dict:
+        """
+        This request is used to return metadata for a given scene. 
+
+        .. warning:: The parameter `entity_id` is named confusingly. Depending on `id_type`, passing one of entityId, displayId or orderingId is allowed
+
+        :param dataset_name: Used to identify the dataset to search
+        :type dataset_name: str
+        :param entity_id: Used to identify the scene to return results for
+        :type entity_id: str
+        :param id_type: If populated, identifies which ID field (entityId, displayId or orderingId) to use when searching for the provided entityId, defaults to "entityId"
+        :type id_type: Optional[str], optional
+        :param metadata_type: If populated, identifies which metadata to return (summary, full, fgdc, iso), defaults to None
+        :type metadata_type: Optional[str], optional
+        :param include_null_metadata: Optional parameter to include null metadata values, defaults to None
+        :type include_null_metadata: Optional[bool], optional
+        :param use_customization: Optional parameter to display metadata view as per user customization, defaults to None
+        :type use_customization: Optional[bool], optional
+        :return: Dict containing scene metadata
+        :rtype: Dict
+        
+        :raises HTTPError:
+        """        
+        payload = {
+            "datasetName": dataset_name,
+            "entityId": entity_id,
+            "idType": id_type,
+            "metadataType": metadata_type,
+            "includeNullMetadataValues": include_null_metadata,
+            "useCustomization": use_customization
+        }
+        with requests.get(Api.ENDPOINT + "scene-metadata", json=payload, headers=self.headers) as r:
+            message_content: Dict = loads(r.text)
+            
+            if message_content["errorCode"] is not None:
+                print(f"{message_content['errorCode']}: {message_content['errorMessage']}", file=sys.stderr)
+
+            _ = r.raise_for_status()
+        return message_content["data"]
 
 
-    def scene_metadata_list(self):
-        pass
+    def scene_metadata_list(self, list_id: str, dataset_name: Optional[str] = None, metadata_type: Optional[str] = None, include_null_metadata: Optional[bool] = None, use_customization: Optional[bool] = None) -> Dict:
+        """
+        Scene Metadata where the input is a pre-set list. 
+
+        :param list_id: Used to identify the list of scenes to use
+        :type list_id: str
+        :param dataset_name: Used to identify the dataset to search, defaults to None
+        :type dataset_name: Optional[str], optional
+        :param metadata_type: If populated, identifies which metadata to return (summary or full), defaults to None
+        :type metadata_type: Optional[str], optional
+        :param include_null_metadata: Optional parameter to include null metadata values, defaults to None
+        :type include_null_metadata: Optional[bool], optional
+        :param use_customization: Optional parameter to display metadata view as per user customization, defaults to None
+        :type use_customization: Optional[bool], optional
+        :return: Dict containing metadata for requested list
+        :rtype: Dict
+        """
+        payload = {
+            "datasetName": dataset_name,
+            "listId": list_id,
+            "metadataType": metadata_type,
+            "includeNullMetadataValues": include_null_metadata,
+            "useCustomization": use_customization
+        }
+        with requests.get(Api.ENDPOINT + "scene-metadata-list", json=payload, headers=self.headers) as r:
+            message_content: Dict = loads(r.text)
+            
+            if message_content["errorCode"] is not None:
+                print(f"{message_content['errorCode']}: {message_content['errorMessage']}", file=sys.stderr)
+
+            _ = r.raise_for_status()
+        return message_content["data"]        
 
 
-    def scene_metadata_xml(self):
-        pass
+    def scene_metadata_xml(self, dataset_name: str, entity_id: str, metadata_type: Optional[str] = None) -> Dict:
+        """
+        Returns metadata formatted in XML, ahering to FGDC, ISO and EE scene metadata formatting standards. 
+
+        .. note:: It's unclear if entity_id refers exclucively to the entityId or if other kinds of Ids can be passed as well.
+
+        :param dataset_name: Used to identify the dataset to search
+        :type dataset_name: str
+        :param entity_id: Used to identify the scene to return results for
+        :type entity_id: str
+        :param metadata_type: Used to identify the scene to return results for, defaults to None
+        :type metadata_type: Optional[str], optional
+        :return: Returns dictionary with metadata for requested scene. The XML content is available with the key 'exportContent'
+        :rtype: Dict
+
+        :raises HTTPError:
+        """        
+        payload = {
+            "datasetName": dataset_name,
+            "entityId": entity_id,
+            "metadataType": metadata_type
+        }
+        with requests.get(Api.ENDPOINT + "scene-metadata-list", json=payload, headers=self.headers) as r:
+            message_content: Dict = loads(r.text)
+            
+            if message_content["errorCode"] is not None:
+                print(f"{message_content['errorCode']}: {message_content['errorMessage']}", file=sys.stderr)
+
+            _ = r.raise_for_status()
+        return message_content["data"]
 
 
-    def scene_search(self):
-        pass
+    def scene_search(self, dataset_name: str, max_results: int = 100, starting_number: Optional[int] = None, metadata_type: Optional[str] = None, sort_field: Optional[str] = None, sort_direction: Optional[Literal["ASC", "DESC"]] = None, sort_customization: Optional[SortCustomization] = None, use_customization: Optional[bool] = None, scene_filter: Optional[SceneFilter] = None, compare_list_name: Optional[str] = None, bulk_list_name: Optional[str] = None, order_list_name: Optional[str] = None, exclude_list_name: Optional[str] = None, include_null_metadata: Optional[bool] = None) -> Dict:
+        """
+        Searching is done with limited search criteria. All coordinates are assumed decimal-degree format. If lowerLeft or upperRight are supplied, then both must exist in the request to complete the bounding box. Starting and ending dates, if supplied, are used as a range to search data based on acquisition dates. The current implementation will only search at the date level, discarding any time information. If data in a given dataset is composite data, or data acquired over multiple days, a search will be done to match any intersection of the acquisition range. There currently is a 50,000 scene limit for the number of results that are returned, however, some client applications may encounter timeouts for large result sets for some datasets. To use the sceneFilter field, pass one of the four search filter objects (SearchFilterAnd, SearchFilterBetween, SearchFilterOr, SearchFilterValue) in JSON format with sceneFilter being the root element of the object.
+
+        Searches without a 'sceneFilter' parameter can take much longer to execute. To minimize this impact we use a cached scene count for 'totalHits' instead of computing the actual row count. An additional field, 'totalHitsAccuracy', is also included in the response to indicate if the 'totalHits' value was computed based off the query or using an approximated value. This does not impact the users ability to access these results via pagination. This cached value is updated daily for all datasets with active data ingests. Ingest frequency for each dataset can be found using the 'ingestFrequency' field in the dataset, dataset-categories and dataset-search endpoint responses. 
+
+        .. note:: It returns 100 results by default. Users can set input 'maxResults' to get different results number returned. It is recommened to set the maxResults less than 10,000 to get better performance. The allowed maximum is 50_000.
+
+        .. note:: The response of this request includes a 'totalHits' response parameter that indicates the total number of scenes that match the search query to allow for pagination.
+
+        .. note:: The argument dataset_name can be given by datasetAlias.
+
+        .. note:: starting_number is 1-indexed
+
+        .. warning: SortCustomizatoin and SceneFilter are likely not implemented correctly, yet!
+
+        :param dataset_name: Used to identify the dataset to search. Can be datasetAlias.
+        :type dataset_name: str
+        :param max_results: How many results should be returned ?, defaults to 100
+        :type max_results: int, optional
+        :param starting_number: Used to identify the start number to search from, defaults to None
+        :type starting_number: Optional[int], optional
+        :param metadata_type: If populated, identifies which metadata to return (summary or full), defaults to None
+        :type metadata_type: Optional[str], optional
+        :param sort_field: Determines which field to sort the results on, defaults to None
+        :type sort_field: Optional[str], optional
+        :param sort_direction: Determines how the results should be sorted, defaults to None
+        :type sort_direction: Optional[Literal["ASC", "DESC"]], optional
+        :param sort_customization: Used to pass in custom sorts, defaults to None
+        :type sort_customization: Optional[SortCustomization], optional
+        :param use_customization: Optional parameter to indicate whether to use customization, defaults to None
+        :type use_customization: Optional[bool], optional
+        :param scene_filter: Used to filter data within the dataset, defaults to None
+        :type scene_filter: Optional[SceneFilter], optional
+        :param compare_list_name: If provided, defined a scene-list listId to use to track scenes selected for comparison, defaults to None
+        :type compare_list_name: Optional[str], optional
+        :param bulk_list_name: If provided, defined a scene-list listId to use to track scenes selected for bulk ordering, defaults to None
+        :type bulk_list_name: Optional[str], optional
+        :param order_list_name: If provided, defined a scene-list listId to use to track scenes selected for on-demand ordering, defaults to None
+        :type order_list_name: Optional[str], optional
+        :param exclude_list_name: If provided, defined a scene-list listId to use to exclude scenes from the results, defaults to None
+        :type exclude_list_name: Optional[str], optional
+        :param include_null_metadata: Optional parameter to include null metadata values, defaults to None
+        :type include_null_metadata: Optional[bool], optional
+        :return: Dictionary containing search results as List[Dict] together with some additional search meatadata
+        :rtype: Dict
+
+        :raises HTTPError:
+
+        :Example:
+
+        # General search
+        Api.scene_search("gls_all", max_results=500, scene_filter=SceneFilter(AcquisitionFilter(...), CloudCoverFilter(...), ...), bulk_list_name="my_bulk_list", metadata_type="summary", order_list_name="my_order_list", starting_number=1, compare_list_name="my_comparison_list", exlucde_list_name="my_exclude_list")
+
+        # Search with spatial filter and ingest filter
+
+        # Search with acquisition filter
+
+        # Search with metadata filter (metadata filter ids can be retrieved by calling dataset-filters)
+
+        # Sort search results using useCustomization flag and sortCustomization
+        """        
+        # TODO add missing examples
+        payload = {
+            "datasetName": dataset_name,
+            "maxResults": max_results,
+            "startingNumber": starting_number,
+            "metadataType": metadata_type,
+            "sortField": sort_field,
+            "sortDirection": sort_direction,
+            "sortCustomization": sort_customization,
+            "useCustomization": use_customization,
+            "sceneFilter": scene_filter,
+            "compareListName": compare_list_name,
+            "bulkListName": bulk_list_name,
+            "orderListName": order_list_name,
+            "excludeListName": exclude_list_name,
+            "includeNullMetadataValue": include_null_metadata,
+        }
+        with requests.get(Api.ENDPOINT + "scene-search", json=payload, headers=self.headers) as r:
+            message_content: Dict = loads(r.text)
+            
+            if message_content["errorCode"] is not None:
+                print(f"{message_content['errorCode']}: {message_content['errorMessage']}", file=sys.stderr)
+
+            _ = r.raise_for_status()
+        return message_content["data"]
 
 
-    def scene_search_delete(self):
-        pass
+    def scene_search_delete(self, dataset_name: str, max_results: int = 100, starting_number: Optional[int] = None, sort_field: Optional[str] = None, sort_direction: Optional[Literal["ASC", "DEC"]] = None, temporal_filter: Optional[TemporalFilter] = None) -> Dict:
+        """
+        This method is used to detect deleted scenes from datasets that support it. Supported datasets are determined by the 'supportDeletionSearch' parameter in the 'datasets' response. There currently is a 50,000 scene limit for the number of results that are returned, however, some client applications may encounter timeouts for large result sets for some datasets. 
+
+        .. note:: It returns 100 results by default. Users can set input 'maxResults' to get different results number returned. It is recommened to set the maxResults less than 10,000 to get better performance. The allowed maximum is 50_000.
+
+        .. note:: The response of this request includes a 'totalHits' response parameter that indicates the total number of scenes that match the search query to allow for pagination.
+
+        .. note:: The argument dataset_name can be given by datasetAlias.
+
+        .. note:: starting_number is 1-indexed
+
+        :param dataset_name: Used to identify the dataset to search
+        :type dataset_name: str
+        :param max_results: How many results should be returned ?, defaults to 100
+        :type max_results: int, optional
+        :param starting_number: Used to identify the start number to search from, defaults to None
+        :type starting_number: Optional[int], optional
+        :param sort_field: Determines which field to sort the results on, defaults to None
+        :type sort_field: Optional[str], optional
+        :param sort_direction: Determines how the results should be sorted, defaults to None
+        :type sort_direction: Optional[Literal["ASC", "DEC"]], optional
+        :param temporal_filter: Used to filter data based on data acquisition, defaults to None
+        :type temporal_filter: Optional[TemporalFilter], optional
+        :return: Dictionary containing search results as List[Dict] together with some additional search meatadata
+        :rtype: Dict
+
+        :raises HTTPError:
+        """
+        payload = {
+            "datasetName": dataset_name,
+            "maxResults": max_results,
+            "startingNumber": starting_number,
+            "sortField": sort_field,
+            "sortDirection": sort_direction,
+            "temporalFilter": temporal_filter
+        }
+        with requests.get(Api.ENDPOINT + "scene-search-delete", json=payload, headers=self.headers) as r:
+            message_content: Dict = loads(r.text)
+            
+            if message_content["errorCode"] is not None:
+                print(f"{message_content['errorCode']}: {message_content['errorMessage']}", file=sys.stderr)
+
+            _ = r.raise_for_status()
+        return message_content["data"]
 
 
-    def scene_search_secondary(self):
+    def scene_search_secondary(self, entity_id: str, dataset_name: str, max_results: int = 100, starting_number: Optional[int] = None, metadata_type: Optional[str] = None, sort_filed: Optional[str] = None, sort_direction: Optional[Literal["ASC", "DESC"]] = None, compare_list_name: Optional[str] = None, bulk_list_name: Optional[str] = None, order_list_name: Optional[str] = None, exlucde_list_name: Optional[str] = None) -> Dict:
+        """
+        This method is used to find the related scenes for a given scene.
+
+        .. note:: It returns 100 results by default. Users can set input 'maxResults' to get different results number returned. It is recommened to set the maxResults less than 10,000 to get better performance. The allowed maximum is 50_000.
+
+        .. note:: The response of this request includes a 'totalHits' response parameter that indicates the total number of scenes that match the search query to allow for pagination.
+
+        .. note:: The argument dataset_name can be given by datasetAlias.
+
+        .. note:: starting_number is 1-indexed
+
+        :param entity_id: Used to identify the scene to find related scenes for
+        :type entity_id: str
+        :param dataset_name: Used to identify the dataset to search
+        :type dataset_name: str
+        :param max_results: How many results should be returned ?, defaults to 100
+        :type max_results: int, optional
+        :param starting_number: Used to identify the start number to search from, defaults to None
+        :type starting_number: Optional[int], optional
+        :param metadata_type: If populated, identifies which metadata to return (summary or full), defaults to None
+        :type metadata_type: Optional[str], optional
+        :param sort_filed: Determines which field to sort the results on, defaults to None
+        :type sort_filed: Optional[str], optional
+        :param sort_direction: Determines how the results should be sorted, defaults to None
+        :type sort_direction: Optional[Literal["ASC", "DESC"]], optional
+        :param compare_list_name: If provided, defined a scene-list listId to use to track scenes selected for comparison, defaults to None
+        :type compare_list_name: Optional[str], optional
+        :param bulk_list_name: If provided, defined a scene-list listId to use to track scenes selected for bulk ordering, defaults to None
+        :type bulk_list_name: Optional[str], optional
+        :param order_list_name: If provided, defined a scene-list listId to use to track scenes selected for on-demand ordering, defaults to None
+        :type order_list_name: Optional[str], optional
+        :param exlucde_list_name: If provided, defined a scene-list listId to use to exclude scenes from the results, defaults to None
+        :type exlucde_list_name: Optional[str], optional
+        :return: Dictionary containing search results for related scenes as List[Dict] together with some additional search meatadata
+        :rtype: Dict
+
+        :raise HTTPError:
+        """        
         pass
 
 
