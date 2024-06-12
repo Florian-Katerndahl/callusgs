@@ -1,6 +1,7 @@
 """
 API Class representing USGS's machine-to-machine API: https://m2m.cr.usgs.gov/api/docs/reference/
 """
+
 from typing import Optional, Any, Dict, List, Literal
 from datetime import datetime
 from json import loads
@@ -152,20 +153,12 @@ class Api:
         payload: Dict = {"username": username, "password": password}
         if user_context:
             payload += {"userContext": user_context}
-        with requests.post(Api.ENDPOINT + "login", json=payload) as r:
-            message_content: Dict = loads(r.text)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
+        result = self._call_get("login", json=payload)
 
-            _ = r.raise_for_status()
-
-            self.key = message_content["data"]
-            self.login_timestamp = datetime.now()
-            self.headers = {"X-Auth-Token": self.key}
+        self.key = result["data"]
+        self.login_timestamp = datetime.now()
+        self.headers = {"X-Auth-Token": self.key}
 
     def login_app_guest(self, application_token: str, user_token: str):
         """
@@ -186,20 +179,11 @@ class Api:
         :raises HTTPError:
         """
         payload: Dict = {"application_token": application_token, "user_token": user_token}
-        with requests.post(Api.ENDPOINT + "login-app-guest", json=payload) as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("login-app-guest", json=payload)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-
-            self.key = message_content["data"]
-            self.login_timestamp = datetime.now()
-            self.headers = {"X-Auth-Token": self.key}
+        self.key = result["data"]
+        self.login_timestamp = datetime.now()
+        self.headers = {"X-Auth-Token": self.key}
 
     def login_sso(self, user_context: UserContext = None):
         """
@@ -237,27 +221,17 @@ class Api:
         :raises HTTPError:
         """
         payload: Dict = {"username": username, "token": token}
-        with requests.post(Api.ENDPOINT + "login-token", json=payload) as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("login-token", json=payload)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-
-            self.key = message_content["data"]
-            self.login_timestamp = datetime.now()
-            self.headers = {"X-Auth-Token": self.key}
+        self.key = result["data"]
+        self.login_timestamp = datetime.now()
+        self.headers = {"X-Auth-Token": self.key}
 
     def logout(self) -> None:
         """
         This method is used to remove the users API key from being used in the future.
         :raises HTTPError:
         """
-        # TODO also call request.delete/close whatever it is. Can/should be bundled in _logout()
         with requests.post(Api.ENDPOINT + "logout", headers=self.headers) as r:
             _ = r.raise_for_status()
         self.key = None
@@ -276,18 +250,9 @@ class Api:
         :rtype: List[str]
         :raises HTTPError:
         """
-        with requests.get(Api.ENDPOINT + "permissions") as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("permissions")
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-
-        return message_content["data"]
+        return result["data"]
 
     def placename(
         self, feature_type: Optional[Literal["US", "World"]] = None, name: Optional[str] = None
@@ -308,18 +273,9 @@ class Api:
         # TODO convert result dicts to class instances of class Place; depend on method argument if this should
         #  be done
         payload = {"featureType": feature_type, "name": name}
-        with requests.get(Api.ENDPOINT + "placename", json=payload, headers=self.headers) as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("placename", json=payload, headers=self.headers)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-
-        return message_content["data"]["results"]
+        return result["data"]["results"]
 
     def scene_list_add(
         self,
@@ -371,21 +327,12 @@ class Api:
             "timeToLive": ttl,
             "checkDownloadRestriction": check_download_restriction,
         }
-        with requests.get(Api.ENDPOINT + "scene-list-add", json=payload, headers=self.headers) as r:
-            message_content: Dict = loads(r.text)
-
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
+        result = self._call_get("scene-list-add", json=payload, headers=self.headers)
 
         items_to_add: int = 1 if entity_ids is None else len(entity_ids)
-        if message_content["data"] != items_to_add:
+        if result["data"] != items_to_add:
             raise RuntimeError(
-                f"Number of scenes added {message_content['data']} does not equal provided number of scenes {items_to_add}"
+                f"Number of scenes added {result['data']} does not equal provided number of scenes {items_to_add}"
             )
 
     def scene_list_get(
@@ -422,18 +369,9 @@ class Api:
             "startingNumber": starting_number,
             "maxResults": max_results,
         }
-        with requests.get(Api.ENDPOINT + "scene-list-get", json=payload, headers=self.headers) as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("scene-list-get", json=payload, headers=self.headers)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-
-        return message_content["data"]
+        return result["data"]
 
     def scene_list_remove(
         self,
@@ -474,18 +412,7 @@ class Api:
             "entityId": entity_id,
             "entityIds": entity_ids,
         }
-        with requests.get(
-            Api.ENDPOINT + "scene-list-remove", json=payload, headers=self.headers
-        ) as r:
-            message_content: Dict = loads(r.text)
-
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
+        _ = self._call_get("scene-list-remove", json=payload, headers=self.headers)
 
     def scene_list_summary(self, list_id: str, dataset_name: Optional[str]) -> Dict:
         """
@@ -503,20 +430,9 @@ class Api:
             "listID": list_id,
             "datasetName": dataset_name,
         }
-        with requests.get(
-            Api.ENDPOINT + "scene-list-summary", json=payload, headers=self.headers
-        ) as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("scene-list-summary", json=payload, headers=self.headers)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-
-        return message_content["data"]
+        return result["data"]
 
     def scene_list_types(self, list_filter: Optional[str]) -> List[Dict]:
         """
@@ -529,20 +445,9 @@ class Api:
         """
         # TODO list_filter would likely have to be the result of the MetadataFilter types, no?
         payload = {"listFilter": list_filter}
-        with requests.get(
-            Api.ENDPOINT + "scene-list-types", json=payload, headers=self.headers
-        ) as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("scene-list-types", json=payload, headers=self.headers)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-
-        return message_content["data"]
+        return result["data"]
 
     def scene_metadata(
         self,
@@ -584,17 +489,9 @@ class Api:
             "includeNullMetadataValues": include_null_metadata,
             "useCustomization": use_customization,
         }
-        with requests.get(Api.ENDPOINT + "scene-metadata", json=payload, headers=self.headers) as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("scene-metadata", json=payload, headers=self.headers)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-        return message_content["data"]
+        return result["data"]
 
     def scene_metadata_list(
         self,
@@ -627,19 +524,9 @@ class Api:
             "includeNullMetadataValues": include_null_metadata,
             "useCustomization": use_customization,
         }
-        with requests.get(
-            Api.ENDPOINT + "scene-metadata-list", json=payload, headers=self.headers
-        ) as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("scene-metadata-list", json=payload, headers=self.headers)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-        return message_content["data"]
+        return result["data"]
 
     def scene_metadata_xml(
         self, dataset_name: str, entity_id: str, metadata_type: Optional[str] = None
@@ -667,19 +554,9 @@ class Api:
             "entityId": entity_id,
             "metadataType": metadata_type,
         }
-        with requests.get(
-            Api.ENDPOINT + "scene-metadata-list", json=payload, headers=self.headers
-        ) as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("scene-metadata-list", json=payload, headers=self.headers)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-        return message_content["data"]
+        return result["data"]
 
     def scene_search(
         self,
@@ -810,17 +687,9 @@ class Api:
             "excludeListName": exclude_list_name,
             "includeNullMetadataValue": include_null_metadata,
         }
-        with requests.get(Api.ENDPOINT + "scene-search", json=payload, headers=self.headers) as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("scene-search", json=payload, headers=self.headers)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-        return message_content["data"]
+        return result["data"]
 
     def scene_search_delete(
         self,
@@ -875,19 +744,9 @@ class Api:
             "sortDirection": sort_direction,
             "temporalFilter": temporal_filter,
         }
-        with requests.get(
-            Api.ENDPOINT + "scene-search-delete", json=payload, headers=self.headers
-        ) as r:
-            message_content: Dict = loads(r.text)
+        result = self._call_get("scene-search-delete", json=payload, headers=self.headers)
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
-
-            _ = r.raise_for_status()
-        return message_content["data"]
+        return result["data"]
 
     def scene_search_secondary(
         self,
