@@ -8,7 +8,8 @@ import sys
 import warnings
 import requests
 
-from callusgs.types import UserContext, SortCustomization, SceneFilter, TemporalFilter
+from callusgs.Types import UserContext, SortCustomization, SceneFilter, TemporalFilter
+from callusgs.Errors import AuthenticationEarthExplorerException
 
 
 class Api:
@@ -29,14 +30,14 @@ class Api:
         :type endpoint: str
         :param conversion: How respinse should be interpreted, defaults to "text"
         :type conversion: Optional[Literal["text", "binary"]], optional
-        :raises RuntimeError: If login is older than two hours, the api token used is not valid anymore
+        :raises AuthenticationEarthExplorerException: If login is older than two hours, the api token used is not valid anymore
         :raises AttributeError: Paramter passed onto 'conversion' must be either 'text' or 'binary'
         :raises HTTPError:
         :return: Complete API response dictionary
         :rtype: Dict
         """
         if (datetime.now() - self.login_timestamp).hour >= 2:
-            raise RuntimeError(
+            raise AuthenticationEarthExplorerException(
                 "Two hours have passed since you logged in, api session token expired. Please login again!"
             )
 
