@@ -8,7 +8,7 @@ import sys
 import warnings
 import requests
 
-from callusgs.types import UserContext, SortCustomization, SceneFilter
+from callusgs.types import UserContext, SortCustomization, SceneFilter, TemporalFilter
 
 
 class Api:
@@ -137,8 +137,8 @@ class Api:
         hours and should be destroyed upon final use of the service by calling the logout method.
 
         .. note:: This request requires an HTTP POST request instead of a HTTP GET request as a
-        security measure to prevent username and password information from being logged by firewalls,
-        web servers, etc.
+            security measure to prevent username and password information from being logged
+            by firewalls, web servers, etc.
 
         :param username: ERS Username
         :type username: str
@@ -220,14 +220,14 @@ class Api:
         """
         This login method uses ERS application tokens to allow for authentication that is not
         directly tied the users ERS password. Instructions for generating the application token
-        can be found [here](https://www.usgs.gov/media/files/m2m-application-token-documentation).
+        can be found `here <https://www.usgs.gov/media/files/m2m-application-token-documentation>`_.
 
         Upon a successful login, an API key will be returned. This key will be active for two
         hours and should be destroyed upon final use of the service by calling the logout method.
 
         .. note:: This request requires an HTTP POST request instead of a HTTP GET request as a
-        security measure to prevent username and password information from being logged by
-        firewalls, web servers, etc.
+            security measure to prevent username and password information from being logged by
+            firewalls, web servers, etc.
 
         :param username: ERS Username
         :type username: str
@@ -300,7 +300,7 @@ class Api:
         :type name: Optional[str], optional
         :return: Return list of dictionaries for matched places.
             Dictionary keys are: ['id', 'feature_id', 'placename', 'feature_code', 'country_code',
-                                  'latitude', 'longitude', 'feature_name', 'country_name'].
+            'latitude', 'longitude', 'feature_name', 'country_name'].
         :rtype: Dict
         :raises HTTPError:
         """
@@ -556,7 +556,7 @@ class Api:
         This request is used to return metadata for a given scene.
 
         .. note:: The parameter `entity_id` is named confusingly.
-        Depending on `id_type`, passing one of entityId, displayId or orderingId is allowed
+            Depending on `id_type`, passing one of entityId, displayId or orderingId is allowed
 
         :param dataset_name: Used to identify the dataset to search
         :type dataset_name: str
@@ -648,7 +648,7 @@ class Api:
         formatting standards.
 
         .. note:: It's unclear if entity_id refers exclucively to the entityId or
-        if other kinds of Ids can be passed as well.
+            if other kinds of Ids can be passed as well.
 
         :param dataset_name: Used to identify the dataset to search
         :type dataset_name: str
@@ -722,12 +722,12 @@ class Api:
         responses.
 
         .. note:: It returns 100 results by default. Users can set input 'maxResults' to get
-        different results number returned. It is recommened to set the maxResults less than
-        10,000 to get better performance. The allowed maximum is 50_000.
+            different results number returned. It is recommened to set the maxResults less than
+            10,000 to get better performance. The allowed maximum is 50_000.
 
         .. note:: The response of this request includes a 'totalHits' response parameter
-        that indicates the total number of scenes that match the search query to allow for
-        pagination.
+            that indicates the total number of scenes that match the search query to allow for
+            pagination.
 
         .. note:: The argument dataset_name can be given by datasetAlias.
 
@@ -771,16 +771,17 @@ class Api:
         :Example:
 
         # General search
+
         Api.scene_search(
-            "gls_all",
-            max_results=500,
-            scene_filter=SceneFilter(AcquisitionFilter(...), CloudCoverFilter(...), ...),
-            bulk_list_name="my_bulk_list",
-            metadata_type="summary",
-            order_list_name="my_order_list",
-            starting_number=1,
-            compare_list_name="my_comparison_list",
-            exlucde_list_name="my_exclude_list"
+        "gls_all",
+        max_results=500,
+        scene_filter=SceneFilter(AcquisitionFilter(...), CloudCoverFilter(...), ...),
+        bulk_list_name="my_bulk_list",
+        metadata_type="summary",
+        order_list_name="my_order_list",
+        starting_number=1,
+        compare_list_name="my_comparison_list",
+        exlucde_list_name="my_exclude_list"
         )
 
         # Search with spatial filter and ingest filter
@@ -837,12 +838,12 @@ class Api:
         sets for some datasets.
 
         .. note:: It returns 100 results by default. Users can set input 'maxResults' to get
-        different results number returned. It is recommened to set the maxResults less than
-        10,000 to get better performance. The allowed maximum is 50_000.
+            different results number returned. It is recommened to set the maxResults less than
+            10,000 to get better performance. The allowed maximum is 50_000.
 
         .. note:: The response of this request includes a 'totalHits' response parameter
-        that indicates the total number of scenes that match the search query to allow for
-        pagination.
+            that indicates the total number of scenes that match the search query to allow for
+            pagination.
 
         .. note:: The argument dataset_name can be given by datasetAlias.
 
@@ -905,12 +906,12 @@ class Api:
         This method is used to find the related scenes for a given scene.
 
         .. note:: It returns 100 results by default. Users can set input 'maxResults' to get
-        different results number returned. It is recommened to set the maxResults less than
-        10,000 to get better performance. The allowed maximum is 50_000.
+            different results number returned. It is recommened to set the maxResults less than
+            10,000 to get better performance. The allowed maximum is 50_000.
 
         .. note:: The response of this request includes a 'totalHits' response parameter
-        that indicates the total number of scenes that match the search query to allow for
-        pagination.
+            that indicates the total number of scenes that match the search query to allow for
+            pagination.
 
         .. note:: The argument dataset_name can be given by datasetAlias.
 
