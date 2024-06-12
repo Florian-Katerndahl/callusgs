@@ -152,6 +152,7 @@ class IngestFilter(EarthExplorerBaseType):
 
 class MetadataFilter(EarthExplorerBaseType):
     """This is an abstract data model, use MetadataAnd, MetadataBetween, MetadataOr, or MetadataValue"""
+    # TODO should take an iterable of other Metadata classes/types and store them as string?
 
     def __init__(self, metadata: Any) -> None:
         self.metadata: Any = metadata
@@ -266,6 +267,7 @@ class SceneFilter(EarthExplorerBaseType):
         seasonal_filter: List[int],
         spatial_filter: SpatialFilter,
     ) -> None:
+    # TODO can't most of this made optional?
         """
         Scene Filter data type
 
