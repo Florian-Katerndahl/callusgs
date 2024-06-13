@@ -27,6 +27,9 @@ class Api:
         """
         Abstract method to call API endpoints
 
+        .. note:: You don't need to pass the headers argument as it's taken from the class instance.
+            if you want to add additional header fields, update self headers dictionary of the instance.
+
         :param endpoint: Endpoint to call
         :type endpoint: str
         :param conversion: How respinse should be interpreted, defaults to "text"
@@ -42,7 +45,7 @@ class Api:
                 "Two hours have passed since you logged in, api session token expired. Please login again!"
             )
 
-        with requests.get(Api.ENDPOINT + endpoint, **kwargs) as r:
+        with requests.get(Api.ENDPOINT + endpoint, headers=self.headers, **kwargs) as r:
             if conversion == "text":
                 message_content: Dict = loads(r.text)
             elif conversion == "binary":
@@ -273,7 +276,7 @@ class Api:
         # TODO convert result dicts to class instances of class Place; depend on method argument if this should
         #  be done
         payload = {"featureType": feature_type, "name": name}
-        result = self._call_get("placename", json=payload, headers=self.headers)
+        result = self._call_get("placename", json=payload)
 
         return result["data"]["results"]
 
@@ -327,7 +330,7 @@ class Api:
             "timeToLive": ttl,
             "checkDownloadRestriction": check_download_restriction,
         }
-        result = self._call_get("scene-list-add", json=payload, headers=self.headers)
+        result = self._call_get("scene-list-add", json=payload)
 
         items_to_add: int = 1 if entity_ids is None else len(entity_ids)
         if result["data"] != items_to_add:
@@ -369,7 +372,7 @@ class Api:
             "startingNumber": starting_number,
             "maxResults": max_results,
         }
-        result = self._call_get("scene-list-get", json=payload, headers=self.headers)
+        result = self._call_get("scene-list-get", json=payload)
 
         return result["data"]
 
@@ -412,7 +415,7 @@ class Api:
             "entityId": entity_id,
             "entityIds": entity_ids,
         }
-        _ = self._call_get("scene-list-remove", json=payload, headers=self.headers)
+        _ = self._call_get("scene-list-remove", json=payload)
 
     def scene_list_summary(self, list_id: str, dataset_name: Optional[str]) -> Dict:
         """
@@ -430,7 +433,7 @@ class Api:
             "listID": list_id,
             "datasetName": dataset_name,
         }
-        result = self._call_get("scene-list-summary", json=payload, headers=self.headers)
+        result = self._call_get("scene-list-summary", json=payload)
 
         return result["data"]
 
@@ -445,7 +448,7 @@ class Api:
         """
         # TODO list_filter would likely have to be the result of the MetadataFilter types, no?
         payload = {"listFilter": list_filter}
-        result = self._call_get("scene-list-types", json=payload, headers=self.headers)
+        result = self._call_get("scene-list-types", json=payload)
 
         return result["data"]
 
@@ -489,7 +492,7 @@ class Api:
             "includeNullMetadataValues": include_null_metadata,
             "useCustomization": use_customization,
         }
-        result = self._call_get("scene-metadata", json=payload, headers=self.headers)
+        result = self._call_get("scene-metadata", json=payload)
 
         return result["data"]
 
@@ -524,7 +527,7 @@ class Api:
             "includeNullMetadataValues": include_null_metadata,
             "useCustomization": use_customization,
         }
-        result = self._call_get("scene-metadata-list", json=payload, headers=self.headers)
+        result = self._call_get("scene-metadata-list", json=payload)
 
         return result["data"]
 
@@ -554,7 +557,7 @@ class Api:
             "entityId": entity_id,
             "metadataType": metadata_type,
         }
-        result = self._call_get("scene-metadata-list", json=payload, headers=self.headers)
+        result = self._call_get("scene-metadata-list", json=payload)
 
         return result["data"]
 
@@ -687,7 +690,7 @@ class Api:
             "excludeListName": exclude_list_name,
             "includeNullMetadataValue": include_null_metadata,
         }
-        result = self._call_get("scene-search", json=payload, headers=self.headers)
+        result = self._call_get("scene-search", json=payload)
 
         return result["data"]
 
@@ -804,10 +807,85 @@ class Api:
 
         :raise HTTPError:
         """
-        pass
+        # TODO continue with examples
+        payload = {
+            "entityId": entity_id,
+            "datasetName": dataset_name,
+            "maxResults": max_results,
+            "startingNumber": starting_number,
+            "metadataType": metadata_type,
+            "sortField": sort_filed,
+            "sortDirection": sort_direction,
+            "compareListName": compare_list_name,
+            "bulkListName": bulk_list_name,
+            "orderListName": order_list_name,
+            "excludeListName": exlucde_list_name,
+        }
+        result = self._call_get("scene-search-secondary", json=payload)
 
-    def user_preferences_get(self):
-        pass
+        return result["data"]
 
-    def user_preferences_set(self):
-        pass
+    def user_preferences_get(
+        self, system_id: Optional[str] = None, setting: Optional[List[str]] = None
+    ) -> Dict:
+        """
+        This method is used to retrieve user's preference settings.
+
+        :param system_id: Used to identify which system to return preferences for. If null it will return all the users preferences, defaults to None
+        :type system_id: Optional[str], optional
+        :param setting: If populated, identifies which setting(s) to return, defaults to None
+        :type setting: Optional[List[str]], optional
+        :return: Dict containing, possibly subset, preferences of calling user
+        :rtype: Dict
+
+        :raises HTTPError:
+        """
+        payload = {"systemId": system_id, "setting": setting}
+        result = self._call_get("user-preferences-get", json=payload)
+
+        return result["data"]
+
+    def user_preferences_set(
+        self, system_id: Optional[str] = None, user_preferences: Optional[List[str]] = None
+    ) -> None:
+        """
+        This method is used to create or update user's preferences.
+
+        :param system_id: Used to identify which system the preferences are for, defaults to None
+        :type system_id: Optional[str], optional
+        :param user_preferences: Used to set user preferences for various systems, defaults to None
+        :type user_preferences: Optional[List[str]], optional
+
+        :raises HTTPError:
+
+        :Example:
+
+        preferences = {
+             "userPreferences": {
+                "map": {
+                    "lat": "43.53",
+                    "lng": "-96.73",
+                    "showZoom": false,
+                    "showMouse": true,
+                    "zoomLevel": "7",
+                    "defaultBasemap": "OpenStreetMap"
+                },
+                "browse": {
+                    "browseSize": "10",
+                    "selectedOpacity": "100",
+                    "nonSelectedOpacity": "100"
+                },
+                "general": {
+                    "defaultDataset": "gls_all",
+                    "codiscoveryEnabled": false
+                }
+        }
+
+        Api.user_preferences_set("EE", preferences)
+        """
+        # TODO N° 2
+        # TODO N° 3
+        payload = {"systemId": system_id, "userPreferences": user_preferences}
+        _ = self._call_get("user-preferences-set", json=payload)
+
+        return
