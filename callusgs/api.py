@@ -510,7 +510,7 @@ class Api:
         payload = {"downloadId": download_id}
         result = self._call_get("download-remove", json=payload)
 
-        if result["data"] != True:
+        if result["data"] is not True:
             raise GeneralEarthExplorerException("Removal returned False")
 
     def download_retrieve(
