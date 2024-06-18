@@ -10,9 +10,15 @@ readme = "README.md"
 python = "^3.9"
 requests = "^2.32.3"
 shapely = "^2.0.4"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.2.2"
+
+
+[tool.poetry.group.docs.dependencies]
 sphinx = "^7.3.7"
 sphinx-rtd-theme = "^2.0.0"
-
 
 [build-system]
 requires = ["poetry-core"]
