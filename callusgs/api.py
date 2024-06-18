@@ -9,17 +9,42 @@ import sys
 import warnings
 import requests
 
-from callusgs.Types import UserContext, SortCustomization, SceneFilter, TemporalFilter
+from callusgs.Types import (
+    UserContext,
+    SortCustomization,
+    SceneFilter,
+    TemporalFilter,
+    SpatialFilter,
+    DatasetCustomization,
+)
 from callusgs.Errors import AuthenticationEarthExplorerException
 
 
 class Api:
     ENDPOINT: str = "https://m2m.cr.usgs.gov/api/api/json/stable/"
 
-    def __init__(self) -> None:
+    def __init__(self, method: Optional[str] = "token", **kwargs) -> None:
         self.key: Optional[str] = None
         self.login_timestamp: Optional[datetime] = None
         self.headers: Dict[str, str] = None
+
+    def __enter__(self) -> "Api":
+        match method:
+            case "token":
+                self.login_token(**kwargs)
+            case "password":
+                self.login(**kwargs)
+            case "sso":
+                self.login_sso(**kwargs)
+            case "app_guest":
+                self.login_app_guest(**kwargs)
+            case _:
+                raise AttributeError(f"Unknown login method: {method}")
+
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.logout()
 
     def _call_get(
         self, endpoint: str, conversion: Optional[Literal["text", "binary"]] = "text", /, **kwargs
@@ -65,76 +90,506 @@ class Api:
 
         return message_content
 
-    def check_login_timestamp(self, *args, **kwargs) -> Any:
-        pass
+    def data_owner(self, data_owner: str) -> Dict:
+        """
+        This method is used to provide the contact information of the data owner.
 
-    def data_owner(self):
-        pass
+        :param data_owner: Used to identify the data owner - this value comes from the dataset-search response
+        :type data_owner: str
+        :return: Dict containing contact information
+        :rtype: Dict
+        """
+        payload = {"dataOwner": data_owner}
+        result = self._call_get("data-owner", json=payload)
 
-    def dataset(self):
-        # Input datasetId or datasetName and get dataset description (including the respective other part)
-        pass
+        return result["data"]
 
-    def dataset_browse(self):
-        pass
+    def dataset(self, dataset_id: Optional[str] = None, dataset_name: Optional[str] = None) -> Dict:
+        """
+        This method is used to retrieve the dataset by id or name.
 
-    def dataset_catalogs(self):
-        pass
+        .. note:: Input datasetId or datasetName and get dataset description (including the respective other part).
 
-    def dataset_categories(self):
-        pass
+        .. warning:: Either `dataset_id` or `dataset_name` must be given!
 
-    def dataset_clear_categories(self):
-        pass
+        :param dataset_id: The dataset identifier, defaults to None
+        :type dataset_id: Optional[str], optional
+        :param dataset_name: The system-friendly dataset name, defaults to None
+        :type dataset_name: Optional[str], optional
+        :raises AttributeError:
+        :return: Dict containing dataset information
+        :rtype: Dict
+        """
+        if dataset_id is None and dataset_name is None:
+            raise AttributeError("Not both dataset_id and dataset_name can be None")
 
-    def dataset_coverage(self):
-        pass
+        payload = {"datasetId": dataset_id, "datasetName": dataset_name}
+        result = self._call_get("dataset", json=payload)
 
-    def dataset_filters(self):
-        pass
+        return result["data"]
 
-    def dataset_get_customization(self):
-        pass
+    def dataset_browse(self, dataset_id: str) -> List[Dict]:
+        """
+        This request is used to return the browse configurations for the specified dataset.
 
-    def dataset_get_customizations(self):
-        pass
+        :param dataset_id: Determines which dataset to return browse configurations for
+        :type dataset_id: str
+        :return: List of Dicts, each containing information about configuration of subdatasets
+        :rtype: List[Dict]
+        """
+        payload = {"datasetId": dataset_id}
+        result = self._call_get("dataset-browse", json=payload)
 
-    def dataset_messages(self):
-        pass
+        return result["data"]
 
-    def dataset_metadata(self):
-        pass
+    def dataset_catalogs(self) -> Dict:
+        """
+         This method is used to retrieve the available dataset catalogs.
+         The use of dataset catalogs are not required, but are used to group datasets by
+         their use within our web applications.
 
-    def dataset_search(self):
-        # can be used to transfrom "natural language description" to datasetId
-        pass
+        :return: Dictionary with all available data catalogs
+        :rtype: Dict
+        """
+        result = self._call_get("dataset-catalogs")
 
-    def dataset_set_customization(self):
-        pass
+        return result["data"]
 
-    def dataset_set_customizations(self):
-        pass
+    def dataset_categories(
+        self,
+        catalog: Optional[str] = None,
+        include_message: Optional[bool] = None,
+        public_only: Optional[bool] = None,
+        use_customization: Optional[bool] = None,
+        parent_id: Optional[str] = None,
+        dataset_filter: Optional[str] = None,
+    ) -> Dict:
+        """
+         This method is used to search datasets under the categories.
 
-    def download_complete_proxied(self):
-        pass
+        :param catalog: Used to identify datasets that are associated with a given application, defaults to None
+        :type catalog: Optional[str], optional
+        :param include_message: Optional parameter to include messages regarding specific dataset components, defaults to None
+        :type include_message: Optional[bool], optional
+        :param public_only: Used as a filter out datasets that are not accessible to unauthenticated general public users, defaults to None
+        :type public_only: Optional[bool], optional
+        :param use_customization: Used as a filter out datasets that are excluded by user customization, defaults to None
+        :type use_customization: Optional[bool], optional
+        :param parent_id: If provided, returned categories are limited to categories that are children of the provided ID, defaults to None
+        :type parent_id: Optional[str], optional
+        :param dataset_filter: If provided, filters the datasets - this automatically adds a wildcard before and after the input value, defaults to None
+        :type dataset_filter: Optional[str], optional
+        :return: Dict containing all datasets within a catalog
+        :rtype: Dict
+        """
+        payload = {
+            "catalog": catalog,
+            "includeMessage": include_message,
+            "publicOnly": public_only,
+            "useCustomization": use_customization,
+            "parentId": parent_id,
+            "datasetFilter": dataset_filter,
+        }
+        result = self._call_get("dataset-categories", json=payload)
 
-    def download_labels(self):
-        pass
+        return result["data"]
 
-    def download_order_load(self):
-        pass
+    def dataset_clear_customization(
+        self,
+        dataset_name: Optional[str] = None,
+        metadata_type: Optional[List[str]] = None,
+        file_group_ids: Optional[List[str]] = None,
+    ) -> None:
+        """
+        This method is used the remove an entire customization or clear out a specific metadata type.
 
-    def download_order_remove(self):
-        pass
+        :param dataset_name: Used to identify the dataset to clear. If null, all dataset customizations will be cleared., defaults to None
+        :type dataset_name: Optional[str], optional
+        :param metadata_type: If populated, identifies which metadata to clear(export, full, res_sum, shp), defaults to None
+        :type metadata_type: Optional[List[str]], optional
+        :param file_group_ids: If populated, identifies which file group to clear, defaults to None
+        :type file_group_ids: Optional[List[str]], optional
+        :raises GeneralEarthExplorerException:
+        """
+        payload = {
+            "datasetName": dataset_name,
+            "metadataType": metadata_type,
+            "fileGroupIds": file_group_ids,
+        }
+        result = self._call_get("dataset-clear-customization", json=payload)
 
-    def download_remove(self):
-        pass
+        if result["data"] != 1:
+            raise GeneralEarthExplorerException("Value of data section is not 1")
 
-    def download_retrieve(self):
-        pass
+    def dataset_coverage(self, dataset_name: str) -> Dict:
+        """
+        Returns coverage for a given dataset.
 
-    def grid2ll(self):
-        pass
+        :param dataset_name: Determines which dataset to return coverage for
+        :type dataset_name: str
+        :return: Bounding box and GeoJSON coverage
+        :rtype: Dict
+        """
+        payload = {"datasetName": dataset_name}
+        result = self._call_get("dataset-coverage", json=payload)
+
+        return result["data"]
+
+    def dataset_filters(self, dataset_name: str) -> Dict:
+        """
+        This request is used to return the metadata filter fields for the specified dataset. These values can be used as additional criteria when submitting search and hit queries.
+
+        :param dataset_name: Determines which dataset to return filters for
+        :type dataset_name: str
+        :return: Dict with all related dataset fiters
+        :rtype: Dict
+        """
+        payload = {"datasetName": dataset_name}
+        result = self._call_get("dataset-filters", json=payload)
+
+        return result["data"]
+
+    def dataset_get_customization(self, dataset_name: str) -> Dict:
+        """
+        This method is used to retrieve metadata customization for a specific dataset.
+
+        :param dataset_name: Used to identify the dataset to search
+        :type dataset_name: str
+        :return: Dict containing customized metadata representations
+        :rtype: Dict
+        """
+        payload = {"datasetName": dataset_name}
+        result = self._call_get("dataset-get-customization", json=payload)
+
+        return result["data"]
+
+    def dataset_get_customizations(
+        self, dataset_names: Optional[List[str]] = None, metadata_type: Optional[List[str]] = str
+    ) -> Dict:
+        """
+        This method is used to retrieve metadata customizations for multiple datasets at once.
+
+        :param dataset_names: Used to identify the dataset(s) to return. If null it will return all the users customizations, defaults to None
+        :type dataset_names: Optional[List[str]], optional
+        :param metadata_type: If populated, identifies which metadata to return(export, full, res_sum, shp), defaults to str
+        :type metadata_type: Optional[List[str]], optional
+        :return: Dict containing customized metadata representations for datasets, identified by their Ids
+        :rtype: Dict
+        """
+        payload = {"datasetNames": dataset_names, "metadataType": metadata_type}
+        result = self._call_get("dataset-get-customizations", json=payload)
+
+        return result["data"]
+
+    def dataset_messages(
+        self,
+        catalog: Optional[str],
+        dataset_name: Optional[str] = None,
+        dataset_names: Optional[List[str]] = None,
+    ) -> Dict:
+        """
+        Returns any notices regarding the given datasets features.
+
+        :param catalog: Used to identify datasets that are associated with a given application
+        :type catalog: Optional[str]
+        :param dataset_name: Used as a filter with wildcards inserted at the beginning and the end of the supplied value, defaults to None
+        :type dataset_name: Optional[str], optional
+        :param dataset_names: Used as a filter with wildcards inserted at the beginning and the end of the supplied value, defaults to None
+        :type dataset_names: Optional[List[str]], optional
+        :return: Dict containing notices per dataset supplied
+        :rtype: Dict
+        """
+        payload = {"catalog": catalog, "datasetName": dataset_name, "datasetNames": dataset_names}
+        result = self._call_get("dataset-messages", json=payload)
+
+        return result["data"]
+
+    def dataset_metadata(self, dataset_name: str) -> Dict:
+        """
+        This method is used to retrieve all metadata fields for a given dataset.
+
+        :param dataset_name: The system-friendly dataset name
+        :type dataset_name: str
+        :return: All metadata for given dataset
+        :rtype: Dict
+        """
+        payload = {"datasetName": dataset_name}
+        result = self._call_get("dataset-metadata", json=payload)
+
+        return result["data"]
+
+    def dataset_search(
+        self,
+        catalog: Optional[str] = None,
+        category_id: Optional[str] = None,
+        dataset_name: Optional[str] = None,
+        include_messages: Optional[bool] = None,
+        public_only: Optional[bool] = None,
+        include_unknown_spatial: Optional[bool] = None,
+        temporal_filter: Optional[TemporalFilter] = None,
+        spatial_filter: Optional[SpatialFilter] = None,
+        sort_direction: Optional[Literal["ASC", "DESC"]] = "ASC",
+        sort_field: Optional[str] = None,
+        use_customization: Optional[bool] = None,
+    ) -> Dict:
+        """
+        This method is used to find datasets available for searching. By passing only API Key, all available datasets are returned. Additional parameters such as temporal range and spatial bounding box can be used to find datasets that provide more specific data. The dataset name parameter can be used to limit the results based on matching the supplied value against the public dataset name with assumed wildcards at the beginning and end.
+
+        .. note:: Can be used to transfrom "natural language description" to datasetId and/or dataset_alias.
+
+        :param catalog: Used to identify datasets that are associated with a given application, defaults to None
+        :type catalog: Optional[str], optional
+        :param category_id: Used to restrict results to a specific category (does not search sub-sategories), defaults to None
+        :type category_id: Optional[str], optional
+        :param dataset_name: Used as a filter with wildcards inserted at the beginning and the end of the supplied value, defaults to None
+        :type dataset_name: Optional[str], optional
+        :param include_messages: Optional parameter to include messages regarding specific dataset components, defaults to None
+        :type include_messages: Optional[bool], optional
+        :param public_only: Used as a filter out datasets that are not accessible to unauthenticated general public users, defaults to None
+        :type public_only: Optional[bool], optional
+        :param include_unknown_spatial: Optional parameter to include datasets that do not support geographic searching, defaults to None
+        :type include_unknown_spatial: Optional[bool], optional
+        :param temporal_filter: Used to filter data based on data acquisition, defaults to None
+        :type temporal_filter: Optional[TemporalFilter], optional
+        :param spatial_filter: Used to filter data based on data location, defaults to None
+        :type spatial_filter: Optional[SpatialFilter], optional
+        :param sort_direction: Defined the sorting as Ascending (ASC) or Descending (DESC), defaults to "ASC"
+        :type sort_direction: Optional[Literal["ASC", "DESC"]], optional
+        :param sort_field: Identifies which field should be used to sort datasets (shortName - default, longName, dastasetName, GloVis), defaults to None
+        :type sort_field: Optional[str], optional
+        :param use_customization: Optional parameter to indicate whether to use customization, defaults to None
+        :type use_customization: Optional[bool], optional
+        :return: Get dataset descriptions and attributes
+        :rtype: Dict
+
+        :Example:
+
+        Api().dataset_search("EE", "dataset_name="Collection 2 Level-1")
+        """
+        payload = {
+            "catalog": catalog,
+            "categoryId": category_id,
+            "datasetName": dataset_name,
+            "includeMessages": include_messages,
+            "publicOnly": public_only,
+            "includeUnknownSpatial": include_unknown_spatial,
+            "temporalFilter": temporal_filter,
+            "spatialFilter": spatial_filter,
+            "sortDirection": sort_direction,
+            "sortField": sort_field,
+            "useCustomization": use_customization,
+        }
+        result = self._call_get("dataset-search", json=payload)
+
+        return result["data"]
+
+    def dataset_set_customization(
+        self,
+        dataset_name: str,
+        excluded: Optional[bool] = None,
+        metadata: Optional[Metadata] = None,
+        search_sort: Optional[SearchSort] = None,
+        file_groups: Optional[FileGroups] = None,
+    ) -> None:
+        """
+        This method is used to create or update dataset customizations for a given dataset.
+
+        :param dataset_name: Used to identify the dataset to search
+        :type dataset_name: str
+        :param excluded: Used to exclude the dataset, defaults to None
+        :type excluded: Optional[bool], optional
+        :param metadata: Used to customize the metadata layout, defaults to None
+        :type metadata: Optional[Metadata], optional
+        :param search_sort: Used to sort the dataset results, defaults to None
+        :type search_sort: Optional[SearchSort], optional
+        :param file_groups: Used to customize downloads by file groups, defaults to None
+        :type file_groups: Optional[FileGroups], optional
+        :raises GeneralEarthExplorerException:
+        """
+        payload = {
+            "datasetName": dataset_name,
+            "excluded": excluded,
+            "metadata": metadata,
+            "searchSort": search_sort,
+            "fileGroups": file_groups,
+        }
+        result = self._call_get("dataset-set-customization", json=payload)
+
+        if result["data"] != 1:
+            raise GeneralEarthExplorerException("Value of data section is not 1")
+
+    def dataset_set_customizations(self, dataset_customization: DatasetCustomization) -> None:
+        """
+        This method is used to create or update customizations for multiple datasets at once. 
+
+        :param dataset_customization: Used to create or update a dataset customization for multiple datasets
+        :type dataset_customization: DatasetCustomization
+        :raises GeneralEarthExplorerException:
+        """        
+        payload = {
+            "datasetCustomization": dataset_customization
+        }
+        result = self._call_get("dataset-set-customizations", json=payload)
+
+        if result["data"] != 1:
+            raise GeneralEarthExplorerException("Value of data section is not 1")
+
+    def download_complete_proxied(self, proxied_downloads: List[ProxiedDownload]) -> Dict:
+        """
+        Updates status to 'C' with total downloaded file size for completed proxied downloads.
+
+        :param proxied_downloads: Used to specify multiple proxied downloads
+        :type proxied_downloads: List[ProxiedDownload]
+        :return: Dict containing number of failed downloads and number of statuses updated
+        :rtype: Dict
+        """        
+        payload = {
+            "proxiedDownloads": proxied_downloads
+        }
+        result = self._call_get("download-complete-proxied", json=payload)
+
+        return result["data"]
+
+    def download_labels(self, download_application: Optional[str] = None) -> List[Dict]:
+        # TODO 4
+        """
+        Gets a list of unique download labels associated with the orders. 
+
+        :param download_application: Used to denote the application that will perform the download, defaults to None
+        :type download_application: Optional[str], optional
+        :return: Information about all valid(?) download orders ['label', 'dateEntered', 'downloadSize', 'downloadCount', 'totalComplete']
+        :rtype: List[Dict]
+        """        
+        payload = {
+            "downloadApplication": download_application
+        }
+        result = self._call_get("download-labels", json=payload)
+
+        return result["data"]
+
+    def download_order_load(self, download_application: Optional[str] = None, label: Optional[str] = None) -> List[Dict]:
+        """
+        This method is used to prepare a download order for processing by moving the scenes into the queue for processing.
+
+        :param download_application: Used to denote the application that will perform the download, defaults to None
+        :type download_application: Optional[str], optional
+        :param label: Determines which order to load, defaults to None
+        :type label: Optional[str], optional
+        :return: Metadata for specified orders given by labels
+        :rtype: List[Dict]
+        """        
+        payload = {
+            "downloadApplication": download_application,
+            "label": label
+        }
+        result = self._call_get("download-order-load", json=payload)
+
+        return result["data"]
+
+    def download_order_remove(self, download_application: Optional[str] = None, label: Optional[str] = None) -> None:
+        """
+        This method is used to remove an order from the download queue. 
+
+        :param download_application: Used to denote the application that will perform the download, defaults to None
+        :type download_application: Optional[str], optional
+        :param label: Determines which order to remove, defaults to None
+        :type label: Optional[str], optional
+        :raises GeneralEarthExplorerException:
+        """        
+        payload = {
+            "downloadApplication": download_application,
+            "label": label
+        }
+        result = self._call_get("download-order-remove", json=payload)
+
+        if result["data"] != 2:
+            raise GeneralEarthExplorerException("Value of data section is not 2")
+
+    def download_remove(self, download_id: int) -> None:
+        """
+        Removes an item from the download queue.
+
+        .. note:: "downloadId" can be retrieved by calling download-search.
+
+        :param download_id: Represents the ID of the download from within the queue
+        :type download_id: int
+        :raises GeneralEarthExplorerException:
+        """        
+        payload = {
+            "downloadId": download_id
+        }
+        result = self._call_get("download-remove", json=payload)
+
+        if result["data"] != True:
+            raise GeneralEarthExplorerException("Removal returned False")
+
+    def download_retrieve(self, download_application: Optional[str] = None, label: Optional[str] = None) -> Dict:
+        """
+        Returns all available and previously requests but not completed downloads. 
+
+        .. warning:: This API may be online while the distribution systems are unavailable. When this occurs, the downloads being fulfilled by those systems will not appear as available nor are they counted in the 'queueSize' response field.
+
+        :param download_application: Used to denote the application that will perform the download, defaults to None
+        :type download_application: Optional[str], optional
+        :param label: Determines which downloads to return, defaults to None
+        :type label: Optional[str], optional
+        :return: Dict with EULAs, List of available downloads (['url', 'label', 'entityId', 'eulaCode', 'filesize' 'datasetId', 'displayId', 'downloadId', 'statusCode', 'statusText', 'productCode', 'productName', 'collectionName']), queue size and requested downloads
+        :rtype: Dict
+        """        
+        payload = {
+            "downloadApplication": download_application,
+            "label": label
+        }
+        result = self._call_get("download-retrieve", json=payload)
+
+        return result["data"]
+
+    def download_search(self, active_only: Optional[bool] = None, label: Optional[str] = None, download_application: Optional[str] = None) -> List[Dict]:
+        """
+        This method is used to search for downloads within the queue, regardless of status, that match the given label. 
+
+        :param active_only: Determines if completed, failed, cleared and proxied downloads are returned, defaults to None
+        :type active_only: Optional[bool], optional
+        :param label: Used to filter downloads by label, defaults to None
+        :type label: Optional[str], optional
+        :param download_application: Used to filter downloads by the intended downloading application, defaults to None
+        :type download_application: Optional[str], optional
+        :return: All download orders according to filters (['label', 'entityId', 'eulaCode', 'filesize' 'datasetId', 'displayId', 'downloadId', 'statusCode', 'statusText', 'productCode', 'productName', 'collectionName'])
+        :rtype: List[Dict]
+        """        
+        payload = {
+            "acitveOnly": active_only,
+            "label": label,
+            "downloadApplication": download_application
+        }
+        result = self._call_get("download-search", json=payload)
+
+        return result["data"]
+
+    def grid2ll(self, grid_type: Optional[Literal["WRS1", "WRS2"]], response_shape: Optional[Literal["polygon","point"]] = None, path: Optional[str] = None, row: Optional[str] = None) -> Dict:
+        """
+        Used to translate between known grids and coordinates. 
+
+        :param grid_type: Which grid system is being used?
+        :type grid_type: Optional[Literal["WRS1", "WRS2"]], optional
+        :param response_shape: What type of geometry should be returned - a bounding box polygon or a center point?, defaults to None
+        :type response_shape: Optional[Literal["polygon", "point"]], optional
+        :param path: The x coordinate in the grid system, defaults to None
+        :type path: Optional[str], optional
+        :param row: The y coordinate in the grid system, defaults to None
+        :type row: Optional[str], optional
+        :return: Dict describing returned geometry
+        :rtype: Dict
+        """        
+        payload = {
+            "gridType": grid_type,
+            "responseShape": response_shape,
+            "path": path,
+            "row": row
+        }
+        result = self._call_get("grid2ll", json=payload)
+
+        return result["data"]
 
     def login(self, username: str, password: str, user_context: Any = None):
         """
