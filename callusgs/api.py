@@ -9,44 +9,51 @@ import sys
 import warnings
 import requests
 
-from callusgs.Types import (
+from callusgs.types import (
     UserContext,
     SortCustomization,
     SceneFilter,
     TemporalFilter,
     SpatialFilter,
     DatasetCustomization,
+    Metadata,
+    SearchSort,
+    FileGroups,
+    ProxiedDownload,
 )
-from callusgs.Errors import AuthenticationEarthExplorerException
+from callusgs.errors import AuthenticationEarthExplorerException, GeneralEarthExplorerException
 
 
 class Api:
     ENDPOINT: str = "https://m2m.cr.usgs.gov/api/api/json/stable/"
 
-    def __init__(self, method: Optional[str] = "token", **kwargs) -> None:
+    def __init__(self, method: Optional[str] = "token", user: Optional[str] = None, auth: Optional[str] = None) -> None:
         self.key: Optional[str] = None
         self.login_timestamp: Optional[datetime] = None
         self.headers: Dict[str, str] = None
+        self.login_method = method
+        self.user = user
+        self.auth = auth
 
     def __enter__(self) -> "Api":
-        match method:
+        match self.login_method:
             case "token":
-                self.login_token(**kwargs)
+                self.login_token(self.user, self.auth)
             case "password":
-                self.login(**kwargs)
+                self.login(self.user, self.auth)
             case "sso":
-                self.login_sso(**kwargs)
+                self.login_sso(self.user, self.auth)
             case "app_guest":
-                self.login_app_guest(**kwargs)
+                self.login_app_guest(self.user, self.auth)
             case _:
-                raise AttributeError(f"Unknown login method: {method}")
+                raise AttributeError(f"Unknown login method: {self.login_method}")
 
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.logout()
 
-    def _call_get(
+    def _call_post(
         self, endpoint: str, conversion: Optional[Literal["text", "binary"]] = "text", /, **kwargs
     ) -> Dict:
         """
@@ -54,6 +61,8 @@ class Api:
 
         .. note:: You don't need to pass the headers argument as it's taken from the class instance.
             if you want to add additional header fields, update self headers dictionary of the instance.
+
+        .. note:: As per API migration guide: All methods are POST request methods!
 
         :param endpoint: Endpoint to call
         :type endpoint: str
@@ -65,12 +74,13 @@ class Api:
         :return: Complete API response dictionary
         :rtype: Dict
         """
-        if (datetime.now() - self.login_timestamp).hour >= 2:
+        SECONDS_PER_HOUR: int = 3600
+        if self.login_timestamp is not None and (datetime.now() - self.login_timestamp).total_seconds() >= SECONDS_PER_HOUR * 2:
             raise AuthenticationEarthExplorerException(
                 "Two hours have passed since you logged in, api session token expired. Please login again!"
             )
 
-        with requests.get(Api.ENDPOINT + endpoint, headers=self.headers, **kwargs) as r:
+        with requests.post(Api.ENDPOINT + endpoint, headers=self.headers, **kwargs) as r:
             if conversion == "text":
                 message_content: Dict = loads(r.text)
             elif conversion == "binary":
@@ -100,7 +110,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"dataOwner": data_owner}
-        result = self._call_get("data-owner", json=payload)
+        result = self._call_post("data-owner", json=payload)
 
         return result["data"]
 
@@ -124,7 +134,7 @@ class Api:
             raise AttributeError("Not both dataset_id and dataset_name can be None")
 
         payload = {"datasetId": dataset_id, "datasetName": dataset_name}
-        result = self._call_get("dataset", json=payload)
+        result = self._call_post("dataset", json=payload)
 
         return result["data"]
 
@@ -138,7 +148,7 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"datasetId": dataset_id}
-        result = self._call_get("dataset-browse", json=payload)
+        result = self._call_post("dataset-browse", json=payload)
 
         return result["data"]
 
@@ -151,7 +161,7 @@ class Api:
         :return: Dictionary with all available data catalogs
         :rtype: Dict
         """
-        result = self._call_get("dataset-catalogs")
+        result = self._call_post("dataset-catalogs")
 
         return result["data"]
 
@@ -190,7 +200,7 @@ class Api:
             "parentId": parent_id,
             "datasetFilter": dataset_filter,
         }
-        result = self._call_get("dataset-categories", json=payload)
+        result = self._call_post("dataset-categories", json=payload)
 
         return result["data"]
 
@@ -216,7 +226,7 @@ class Api:
             "metadataType": metadata_type,
             "fileGroupIds": file_group_ids,
         }
-        result = self._call_get("dataset-clear-customization", json=payload)
+        result = self._call_post("dataset-clear-customization", json=payload)
 
         if result["data"] != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
@@ -231,7 +241,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_get("dataset-coverage", json=payload)
+        result = self._call_post("dataset-coverage", json=payload)
 
         return result["data"]
 
@@ -245,7 +255,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_get("dataset-filters", json=payload)
+        result = self._call_post("dataset-filters", json=payload)
 
         return result["data"]
 
@@ -259,7 +269,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_get("dataset-get-customization", json=payload)
+        result = self._call_post("dataset-get-customization", json=payload)
 
         return result["data"]
 
@@ -277,7 +287,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetNames": dataset_names, "metadataType": metadata_type}
-        result = self._call_get("dataset-get-customizations", json=payload)
+        result = self._call_post("dataset-get-customizations", json=payload)
 
         return result["data"]
 
@@ -300,7 +310,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"catalog": catalog, "datasetName": dataset_name, "datasetNames": dataset_names}
-        result = self._call_get("dataset-messages", json=payload)
+        result = self._call_post("dataset-messages", json=payload)
 
         return result["data"]
 
@@ -314,7 +324,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_get("dataset-metadata", json=payload)
+        result = self._call_post("dataset-metadata", json=payload)
 
         return result["data"]
 
@@ -379,7 +389,7 @@ class Api:
             "sortField": sort_field,
             "useCustomization": use_customization,
         }
-        result = self._call_get("dataset-search", json=payload)
+        result = self._call_post("dataset-search", json=payload)
 
         return result["data"]
 
@@ -413,7 +423,7 @@ class Api:
             "searchSort": search_sort,
             "fileGroups": file_groups,
         }
-        result = self._call_get("dataset-set-customization", json=payload)
+        result = self._call_post("dataset-set-customization", json=payload)
 
         if result["data"] != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
@@ -427,7 +437,7 @@ class Api:
         :raises GeneralEarthExplorerException:
         """
         payload = {"datasetCustomization": dataset_customization}
-        result = self._call_get("dataset-set-customizations", json=payload)
+        result = self._call_post("dataset-set-customizations", json=payload)
 
         if result["data"] != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
@@ -442,7 +452,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"proxiedDownloads": proxied_downloads}
-        result = self._call_get("download-complete-proxied", json=payload)
+        result = self._call_post("download-complete-proxied", json=payload)
 
         return result["data"]
 
@@ -457,7 +467,7 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"downloadApplication": download_application}
-        result = self._call_get("download-labels", json=payload)
+        result = self._call_post("download-labels", json=payload)
 
         return result["data"]
 
@@ -475,7 +485,7 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"downloadApplication": download_application, "label": label}
-        result = self._call_get("download-order-load", json=payload)
+        result = self._call_post("download-order-load", json=payload)
 
         return result["data"]
 
@@ -492,7 +502,7 @@ class Api:
         :raises GeneralEarthExplorerException:
         """
         payload = {"downloadApplication": download_application, "label": label}
-        result = self._call_get("download-order-remove", json=payload)
+        result = self._call_post("download-order-remove", json=payload)
 
         if result["data"] != 2:
             raise GeneralEarthExplorerException("Value of data section is not 2")
@@ -508,7 +518,7 @@ class Api:
         :raises GeneralEarthExplorerException:
         """
         payload = {"downloadId": download_id}
-        result = self._call_get("download-remove", json=payload)
+        result = self._call_post("download-remove", json=payload)
 
         if result["data"] is not True:
             raise GeneralEarthExplorerException("Removal returned False")
@@ -529,7 +539,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"downloadApplication": download_application, "label": label}
-        result = self._call_get("download-retrieve", json=payload)
+        result = self._call_post("download-retrieve", json=payload)
 
         return result["data"]
 
@@ -556,7 +566,7 @@ class Api:
             "label": label,
             "downloadApplication": download_application,
         }
-        result = self._call_get("download-search", json=payload)
+        result = self._call_post("download-search", json=payload)
 
         return result["data"]
 
@@ -582,7 +592,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"gridType": grid_type, "responseShape": response_shape, "path": path, "row": row}
-        result = self._call_get("grid2ll", json=payload)
+        result = self._call_post("grid2ll", json=payload)
 
         return result["data"]
 
@@ -607,7 +617,7 @@ class Api:
         if user_context:
             payload += {"userContext": user_context}
 
-        result = self._call_get("login", json=payload)
+        result = self._call_post("login", json=payload)
 
         self.key = result["data"]
         self.login_timestamp = datetime.now()
@@ -632,7 +642,7 @@ class Api:
         :raises HTTPError:
         """
         payload: Dict = {"application_token": application_token, "user_token": user_token}
-        result = self._call_get("login-app-guest", json=payload)
+        result = self._call_post("login-app-guest", json=payload)
 
         self.key = result["data"]
         self.login_timestamp = datetime.now()
@@ -674,7 +684,8 @@ class Api:
         :raises HTTPError:
         """
         payload: Dict = {"username": username, "token": token}
-        result = self._call_get("login-token", json=payload)
+
+        result = self._call_post("login-token", json=payload)
 
         self.key = result["data"]
         self.login_timestamp = datetime.now()
@@ -691,8 +702,21 @@ class Api:
         self.headers = None
         self.login_timestamp = None
 
-    def notifications(self):
-        pass
+    def notifications(self, system_id: str) -> List[Dict]:
+        """
+        Gets a notification list. 
+
+        :param system_id: Used to identify notifications that are associated with a given application
+        :type system_id: str
+        :return: List of all notifications
+        :rtype: List[Dict]
+        """        
+        payload = {
+            "systemId": system_id
+        }
+        results = self._call_post("notifications", json=payload)
+
+        return results["data"]
 
     def permissions(self) -> List[str]:
         """
@@ -703,7 +727,7 @@ class Api:
         :rtype: List[str]
         :raises HTTPError:
         """
-        result = self._call_get("permissions")
+        result = self._call_post("permissions")
 
         return result["data"]
 
@@ -726,7 +750,7 @@ class Api:
         # TODO convert result dicts to class instances of class Place; depend on method argument if this should
         #  be done
         payload = {"featureType": feature_type, "name": name}
-        result = self._call_get("placename", json=payload)
+        result = self._call_post("placename", json=payload)
 
         return result["data"]["results"]
 
@@ -780,7 +804,7 @@ class Api:
             "timeToLive": ttl,
             "checkDownloadRestriction": check_download_restriction,
         }
-        result = self._call_get("scene-list-add", json=payload)
+        result = self._call_post("scene-list-add", json=payload)
 
         items_to_add: int = 1 if entity_ids is None else len(entity_ids)
         if result["data"] != items_to_add:
@@ -822,7 +846,7 @@ class Api:
             "startingNumber": starting_number,
             "maxResults": max_results,
         }
-        result = self._call_get("scene-list-get", json=payload)
+        result = self._call_post("scene-list-get", json=payload)
 
         return result["data"]
 
@@ -865,7 +889,7 @@ class Api:
             "entityId": entity_id,
             "entityIds": entity_ids,
         }
-        _ = self._call_get("scene-list-remove", json=payload)
+        _ = self._call_post("scene-list-remove", json=payload)
 
     def scene_list_summary(self, list_id: str, dataset_name: Optional[str]) -> Dict:
         """
@@ -883,7 +907,7 @@ class Api:
             "listID": list_id,
             "datasetName": dataset_name,
         }
-        result = self._call_get("scene-list-summary", json=payload)
+        result = self._call_post("scene-list-summary", json=payload)
 
         return result["data"]
 
@@ -898,7 +922,7 @@ class Api:
         """
         # TODO list_filter would likely have to be the result of the MetadataFilter types, no?
         payload = {"listFilter": list_filter}
-        result = self._call_get("scene-list-types", json=payload)
+        result = self._call_post("scene-list-types", json=payload)
 
         return result["data"]
 
@@ -942,7 +966,7 @@ class Api:
             "includeNullMetadataValues": include_null_metadata,
             "useCustomization": use_customization,
         }
-        result = self._call_get("scene-metadata", json=payload)
+        result = self._call_post("scene-metadata", json=payload)
 
         return result["data"]
 
@@ -977,7 +1001,7 @@ class Api:
             "includeNullMetadataValues": include_null_metadata,
             "useCustomization": use_customization,
         }
-        result = self._call_get("scene-metadata-list", json=payload)
+        result = self._call_post("scene-metadata-list", json=payload)
 
         return result["data"]
 
@@ -1007,7 +1031,7 @@ class Api:
             "entityId": entity_id,
             "metadataType": metadata_type,
         }
-        result = self._call_get("scene-metadata-list", json=payload)
+        result = self._call_post("scene-metadata-list", json=payload)
 
         return result["data"]
 
@@ -1140,7 +1164,7 @@ class Api:
             "excludeListName": exclude_list_name,
             "includeNullMetadataValue": include_null_metadata,
         }
-        result = self._call_get("scene-search", json=payload)
+        result = self._call_post("scene-search", json=payload)
 
         return result["data"]
 
@@ -1197,7 +1221,7 @@ class Api:
             "sortDirection": sort_direction,
             "temporalFilter": temporal_filter,
         }
-        result = self._call_get("scene-search-delete", json=payload, headers=self.headers)
+        result = self._call_post("scene-search-delete", json=payload, headers=self.headers)
 
         return result["data"]
 
@@ -1271,7 +1295,7 @@ class Api:
             "orderListName": order_list_name,
             "excludeListName": exlucde_list_name,
         }
-        result = self._call_get("scene-search-secondary", json=payload)
+        result = self._call_post("scene-search-secondary", json=payload)
 
         return result["data"]
 
@@ -1291,7 +1315,7 @@ class Api:
         :raises HTTPError:
         """
         payload = {"systemId": system_id, "setting": setting}
-        result = self._call_get("user-preferences-get", json=payload)
+        result = self._call_post("user-preferences-get", json=payload)
 
         return result["data"]
 
@@ -1336,6 +1360,6 @@ class Api:
         # TODO N° 2
         # TODO N° 3
         payload = {"systemId": system_id, "userPreferences": user_preferences}
-        _ = self._call_get("user-preferences-set", json=payload)
+        _ = self._call_post("user-preferences-set", json=payload)
 
         return
