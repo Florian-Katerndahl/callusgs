@@ -420,15 +420,13 @@ class Api:
 
     def dataset_set_customizations(self, dataset_customization: DatasetCustomization) -> None:
         """
-        This method is used to create or update customizations for multiple datasets at once. 
+        This method is used to create or update customizations for multiple datasets at once.
 
         :param dataset_customization: Used to create or update a dataset customization for multiple datasets
         :type dataset_customization: DatasetCustomization
         :raises GeneralEarthExplorerException:
-        """        
-        payload = {
-            "datasetCustomization": dataset_customization
-        }
+        """
+        payload = {"datasetCustomization": dataset_customization}
         result = self._call_get("dataset-set-customizations", json=payload)
 
         if result["data"] != 1:
@@ -442,10 +440,8 @@ class Api:
         :type proxied_downloads: List[ProxiedDownload]
         :return: Dict containing number of failed downloads and number of statuses updated
         :rtype: Dict
-        """        
-        payload = {
-            "proxiedDownloads": proxied_downloads
-        }
+        """
+        payload = {"proxiedDownloads": proxied_downloads}
         result = self._call_get("download-complete-proxied", json=payload)
 
         return result["data"]
@@ -453,21 +449,21 @@ class Api:
     def download_labels(self, download_application: Optional[str] = None) -> List[Dict]:
         # TODO 4
         """
-        Gets a list of unique download labels associated with the orders. 
+        Gets a list of unique download labels associated with the orders.
 
         :param download_application: Used to denote the application that will perform the download, defaults to None
         :type download_application: Optional[str], optional
         :return: Information about all valid(?) download orders ['label', 'dateEntered', 'downloadSize', 'downloadCount', 'totalComplete']
         :rtype: List[Dict]
-        """        
-        payload = {
-            "downloadApplication": download_application
-        }
+        """
+        payload = {"downloadApplication": download_application}
         result = self._call_get("download-labels", json=payload)
 
         return result["data"]
 
-    def download_order_load(self, download_application: Optional[str] = None, label: Optional[str] = None) -> List[Dict]:
+    def download_order_load(
+        self, download_application: Optional[str] = None, label: Optional[str] = None
+    ) -> List[Dict]:
         """
         This method is used to prepare a download order for processing by moving the scenes into the queue for processing.
 
@@ -477,29 +473,25 @@ class Api:
         :type label: Optional[str], optional
         :return: Metadata for specified orders given by labels
         :rtype: List[Dict]
-        """        
-        payload = {
-            "downloadApplication": download_application,
-            "label": label
-        }
+        """
+        payload = {"downloadApplication": download_application, "label": label}
         result = self._call_get("download-order-load", json=payload)
 
         return result["data"]
 
-    def download_order_remove(self, download_application: Optional[str] = None, label: Optional[str] = None) -> None:
+    def download_order_remove(
+        self, download_application: Optional[str] = None, label: Optional[str] = None
+    ) -> None:
         """
-        This method is used to remove an order from the download queue. 
+        This method is used to remove an order from the download queue.
 
         :param download_application: Used to denote the application that will perform the download, defaults to None
         :type download_application: Optional[str], optional
         :param label: Determines which order to remove, defaults to None
         :type label: Optional[str], optional
         :raises GeneralEarthExplorerException:
-        """        
-        payload = {
-            "downloadApplication": download_application,
-            "label": label
-        }
+        """
+        payload = {"downloadApplication": download_application, "label": label}
         result = self._call_get("download-order-remove", json=payload)
 
         if result["data"] != 2:
@@ -514,18 +506,18 @@ class Api:
         :param download_id: Represents the ID of the download from within the queue
         :type download_id: int
         :raises GeneralEarthExplorerException:
-        """        
-        payload = {
-            "downloadId": download_id
-        }
+        """
+        payload = {"downloadId": download_id}
         result = self._call_get("download-remove", json=payload)
 
         if result["data"] != True:
             raise GeneralEarthExplorerException("Removal returned False")
 
-    def download_retrieve(self, download_application: Optional[str] = None, label: Optional[str] = None) -> Dict:
+    def download_retrieve(
+        self, download_application: Optional[str] = None, label: Optional[str] = None
+    ) -> Dict:
         """
-        Returns all available and previously requests but not completed downloads. 
+        Returns all available and previously requests but not completed downloads.
 
         .. warning:: This API may be online while the distribution systems are unavailable. When this occurs, the downloads being fulfilled by those systems will not appear as available nor are they counted in the 'queueSize' response field.
 
@@ -535,18 +527,20 @@ class Api:
         :type label: Optional[str], optional
         :return: Dict with EULAs, List of available downloads (['url', 'label', 'entityId', 'eulaCode', 'filesize' 'datasetId', 'displayId', 'downloadId', 'statusCode', 'statusText', 'productCode', 'productName', 'collectionName']), queue size and requested downloads
         :rtype: Dict
-        """        
-        payload = {
-            "downloadApplication": download_application,
-            "label": label
-        }
+        """
+        payload = {"downloadApplication": download_application, "label": label}
         result = self._call_get("download-retrieve", json=payload)
 
         return result["data"]
 
-    def download_search(self, active_only: Optional[bool] = None, label: Optional[str] = None, download_application: Optional[str] = None) -> List[Dict]:
+    def download_search(
+        self,
+        active_only: Optional[bool] = None,
+        label: Optional[str] = None,
+        download_application: Optional[str] = None,
+    ) -> List[Dict]:
         """
-        This method is used to search for downloads within the queue, regardless of status, that match the given label. 
+        This method is used to search for downloads within the queue, regardless of status, that match the given label.
 
         :param active_only: Determines if completed, failed, cleared and proxied downloads are returned, defaults to None
         :type active_only: Optional[bool], optional
@@ -556,19 +550,25 @@ class Api:
         :type download_application: Optional[str], optional
         :return: All download orders according to filters (['label', 'entityId', 'eulaCode', 'filesize' 'datasetId', 'displayId', 'downloadId', 'statusCode', 'statusText', 'productCode', 'productName', 'collectionName'])
         :rtype: List[Dict]
-        """        
+        """
         payload = {
             "acitveOnly": active_only,
             "label": label,
-            "downloadApplication": download_application
+            "downloadApplication": download_application,
         }
         result = self._call_get("download-search", json=payload)
 
         return result["data"]
 
-    def grid2ll(self, grid_type: Optional[Literal["WRS1", "WRS2"]], response_shape: Optional[Literal["polygon","point"]] = None, path: Optional[str] = None, row: Optional[str] = None) -> Dict:
+    def grid2ll(
+        self,
+        grid_type: Optional[Literal["WRS1", "WRS2"]],
+        response_shape: Optional[Literal["polygon", "point"]] = None,
+        path: Optional[str] = None,
+        row: Optional[str] = None,
+    ) -> Dict:
         """
-        Used to translate between known grids and coordinates. 
+        Used to translate between known grids and coordinates.
 
         :param grid_type: Which grid system is being used?
         :type grid_type: Optional[Literal["WRS1", "WRS2"]], optional
@@ -580,13 +580,8 @@ class Api:
         :type row: Optional[str], optional
         :return: Dict describing returned geometry
         :rtype: Dict
-        """        
-        payload = {
-            "gridType": grid_type,
-            "responseShape": response_shape,
-            "path": path,
-            "row": row
-        }
+        """
+        payload = {"gridType": grid_type, "responseShape": response_shape, "path": path, "row": row}
         result = self._call_get("grid2ll", json=payload)
 
         return result["data"]
