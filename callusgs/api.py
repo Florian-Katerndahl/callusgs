@@ -2,12 +2,15 @@
 API Class representing USGS's machine-to-machine API: https://m2m.cr.usgs.gov/api/docs/reference/
 """
 
+from pathlib import Path
 from typing import Optional, Any, Dict, List, Literal
 from datetime import datetime
-from json import loads
+from json import loads, dumps
+from urllib.parse import unquote
 import sys
 import warnings
 import requests
+from tqdm import tqdm
 
 from callusgs.types import (
     UserContext,
@@ -53,11 +56,24 @@ class Api:
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.logout()
 
+    def _call_get(self, url: str, stream: Optional[bool] = True) -> requests.Response:
+        """
+        Abstract method to call a URL with headers set and optional stream parameter.
+
+        :param url: URL to call with GET requeest
+        :type url: str
+        :param stream: Immediately download the response content, defaults to True
+        :type stream: Optional[bool], optional
+        :return: Response object
+        :rtype: requests.Response
+        """        
+        return requests.get(url, headers=self.headers, stream=stream)
+
     def _call_post(
         self, endpoint: str, conversion: Optional[Literal["text", "binary"]] = "text", /, **kwargs
     ) -> Dict:
         """
-        Abstract method to call API endpoints
+        Abstract method to call API endpoints with POST method
 
         .. note:: You don't need to pass the headers argument as it's taken from the class instance.
             if you want to add additional header fields, update self headers dictionary of the instance.
@@ -110,7 +126,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"dataOwner": data_owner}
-        result = self._call_post("data-owner", json=payload)
+        result = self._call_post("data-owner", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -134,7 +150,7 @@ class Api:
             raise AttributeError("Not both dataset_id and dataset_name can be None")
 
         payload = {"datasetId": dataset_id, "datasetName": dataset_name}
-        result = self._call_post("dataset", json=payload)
+        result = self._call_post("dataset", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -148,7 +164,7 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"datasetId": dataset_id}
-        result = self._call_post("dataset-browse", json=payload)
+        result = self._call_post("dataset-browse", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -200,7 +216,7 @@ class Api:
             "parentId": parent_id,
             "datasetFilter": dataset_filter,
         }
-        result = self._call_post("dataset-categories", json=payload)
+        result = self._call_post("dataset-categories", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -226,7 +242,7 @@ class Api:
             "metadataType": metadata_type,
             "fileGroupIds": file_group_ids,
         }
-        result = self._call_post("dataset-clear-customization", json=payload)
+        result = self._call_post("dataset-clear-customization", data=dumps(payload, default=vars))
 
         if result["data"] != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
@@ -241,7 +257,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post("dataset-coverage", json=payload)
+        result = self._call_post("dataset-coverage", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -255,7 +271,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post("dataset-filters", json=payload)
+        result = self._call_post("dataset-filters", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -269,7 +285,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post("dataset-get-customization", json=payload)
+        result = self._call_post("dataset-get-customization", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -287,7 +303,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetNames": dataset_names, "metadataType": metadata_type}
-        result = self._call_post("dataset-get-customizations", json=payload)
+        result = self._call_post("dataset-get-customizations", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -310,7 +326,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"catalog": catalog, "datasetName": dataset_name, "datasetNames": dataset_names}
-        result = self._call_post("dataset-messages", json=payload)
+        result = self._call_post("dataset-messages", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -324,7 +340,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post("dataset-metadata", json=payload)
+        result = self._call_post("dataset-metadata", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -346,6 +362,8 @@ class Api:
         This method is used to find datasets available for searching. By passing only API Key, all available datasets are returned. Additional parameters such as temporal range and spatial bounding box can be used to find datasets that provide more specific data. The dataset name parameter can be used to limit the results based on matching the supplied value against the public dataset name with assumed wildcards at the beginning and end.
 
         .. note:: Can be used to transfrom "natural language description" to datasetId and/or dataset_alias.
+
+        .. warning:: SpatialFilter is an abstract class. SpatialFilterMbr or SpatialFilterGeoJson must be supplied.
 
         :param catalog: Used to identify datasets that are associated with a given application, defaults to None
         :type catalog: Optional[str], optional
@@ -389,7 +407,7 @@ class Api:
             "sortField": sort_field,
             "useCustomization": use_customization,
         }
-        result = self._call_post("dataset-search", json=payload)
+        result = self._call_post("dataset-search", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -403,6 +421,9 @@ class Api:
     ) -> None:
         """
         This method is used to create or update dataset customizations for a given dataset.
+
+        .. warning:: Metadata is an abstract class. Instead use a combination of
+            MetadataAnd, MetadataBetween, MetadataOr and MetadataValue.
 
         :param dataset_name: Used to identify the dataset to search
         :type dataset_name: str
@@ -423,7 +444,7 @@ class Api:
             "searchSort": search_sort,
             "fileGroups": file_groups,
         }
-        result = self._call_post("dataset-set-customization", json=payload)
+        result = self._call_post("dataset-set-customization", data=dumps(payload, default=vars))
 
         if result["data"] != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
@@ -437,7 +458,7 @@ class Api:
         :raises GeneralEarthExplorerException:
         """
         payload = {"datasetCustomization": dataset_customization}
-        result = self._call_post("dataset-set-customizations", json=payload)
+        result = self._call_post("dataset-set-customizations", data=dumps(payload, default=vars))
 
         if result["data"] != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
@@ -452,7 +473,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"proxiedDownloads": proxied_downloads}
-        result = self._call_post("download-complete-proxied", json=payload)
+        result = self._call_post("download-complete-proxied", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -467,7 +488,7 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"downloadApplication": download_application}
-        result = self._call_post("download-labels", json=payload)
+        result = self._call_post("download-labels", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -485,24 +506,24 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"downloadApplication": download_application, "label": label}
-        result = self._call_post("download-order-load", json=payload)
+        result = self._call_post("download-order-load", data=dumps(payload, default=vars))
 
         return result["data"]
 
     def download_order_remove(
-        self, download_application: Optional[str] = None, label: Optional[str] = None
+        self, label: str, download_application: Optional[str] = None, 
     ) -> None:
         """
         This method is used to remove an order from the download queue.
 
-        :param download_application: Used to denote the application that will perform the download, defaults to None
-        :type download_application: Optional[str], optional
+        :param download_application: Used to denote the application that will perform the download
+        :type download_application: str
         :param label: Determines which order to remove, defaults to None
         :type label: Optional[str], optional
         :raises GeneralEarthExplorerException:
         """
         payload = {"downloadApplication": download_application, "label": label}
-        result = self._call_post("download-order-remove", json=payload)
+        result = self._call_post("download-order-remove", data=dumps(payload, default=vars))
 
         if result["data"] != 2:
             raise GeneralEarthExplorerException("Value of data section is not 2")
@@ -518,7 +539,7 @@ class Api:
         :raises GeneralEarthExplorerException:
         """
         payload = {"downloadId": download_id}
-        result = self._call_post("download-remove", json=payload)
+        result = self._call_post("download-remove", data=dumps(payload, default=vars))
 
         if result["data"] is not True:
             raise GeneralEarthExplorerException("Removal returned False")
@@ -539,7 +560,7 @@ class Api:
         :rtype: Dict
         """
         payload = {"downloadApplication": download_application, "label": label}
-        result = self._call_post("download-retrieve", json=payload)
+        result = self._call_post("download-retrieve", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -566,9 +587,28 @@ class Api:
             "label": label,
             "downloadApplication": download_application,
         }
-        result = self._call_post("download-search", json=payload)
+        result = self._call_post("download-search", data=dumps(payload, default=vars))
 
         return result["data"]
+
+    def download(self, url: str, output_directory: Optional[Path] = Path("."), chunk_size: int = 2048) -> None:
+        # https://stackoverflow.com/questions/31804799/how-to-get-pdf-filename-with-python-requests
+        result = self._call_get(url)
+        result.raise_for_status()
+
+        file_name = unquote(result.headers["content-disposition"].split("filename=").pop().strip('"'))
+        download_size = int(result.headers["content-length"])
+        print(download_size)
+
+        # https://www.slingacademy.com/article/python-requests-module-how-to-download-files-from-urls/
+        with open(output_directory / file_name, "wb") as f, \
+             tqdm(desc=file_name, total=download_size, unit="kB",
+             unit_scale=True, unit_divisor=chunk_size) as bar:
+             for chunk in result.iter_content(chunk_size=chunk_size):
+                bytes_written = f.write(chunk)
+                bar.update(bytes_written)
+
+        result.close()
 
     def grid2ll(
         self,
@@ -592,11 +632,12 @@ class Api:
         :rtype: Dict
         """
         payload = {"gridType": grid_type, "responseShape": response_shape, "path": path, "row": row}
-        result = self._call_post("grid2ll", json=payload)
+        result = self._call_post("grid2ll", data=dumps(payload, default=vars))
 
         return result["data"]
 
     def login(self, username: str, password: str, user_context: Any = None):
+        # TODO show notifications after successfull login? Maybe something for an app, not the api integration
         """
         Upon a successful login, an API key will be returned. This key will be active for two
         hours and should be destroyed upon final use of the service by calling the logout method.
@@ -617,7 +658,7 @@ class Api:
         if user_context:
             payload += {"userContext": user_context}
 
-        result = self._call_post("login", json=payload)
+        result = self._call_post("login", data=dumps(payload, default=vars))
 
         self.key = result["data"]
         self.login_timestamp = datetime.now()
@@ -642,7 +683,7 @@ class Api:
         :raises HTTPError:
         """
         payload: Dict = {"application_token": application_token, "user_token": user_token}
-        result = self._call_post("login-app-guest", json=payload)
+        result = self._call_post("login-app-guest", data=dumps(payload, default=vars))
 
         self.key = result["data"]
         self.login_timestamp = datetime.now()
@@ -685,7 +726,7 @@ class Api:
         """
         payload: Dict = {"username": username, "token": token}
 
-        result = self._call_post("login-token", json=payload)
+        result = self._call_post("login-token", data=dumps(payload, default=vars))
 
         self.key = result["data"]
         self.login_timestamp = datetime.now()
@@ -714,7 +755,7 @@ class Api:
         payload = {
             "systemId": system_id
         }
-        results = self._call_post("notifications", json=payload)
+        results = self._call_post("notifications", data=dumps(payload, default=vars))
 
         return results["data"]
 
@@ -750,7 +791,7 @@ class Api:
         # TODO convert result dicts to class instances of class Place; depend on method argument if this should
         #  be done
         payload = {"featureType": feature_type, "name": name}
-        result = self._call_post("placename", json=payload)
+        result = self._call_post("placename", data=dumps(payload, default=vars))
 
         return result["data"]["results"]
 
@@ -763,7 +804,7 @@ class Api:
         entity_ids: Optional[List[str]] = None,
         ttl: Optional[str] = None,
         check_download_restriction: Optional[bool] = None,
-    ):
+    ) -> None:
         """
         Adds items in the given scene list.
 
@@ -796,7 +837,7 @@ class Api:
         if entity_id is not None and entity_ids is not None:
             warnings.warn("Both entityId and entityIds given. Ignoring the first one")
         payload = {
-            "listID": list_id,
+            "listId": list_id,
             "datasetName": dataset_name,
             "idField": id_field,
             "entityId": entity_id if entity_ids is None else None,
@@ -804,7 +845,7 @@ class Api:
             "timeToLive": ttl,
             "checkDownloadRestriction": check_download_restriction,
         }
-        result = self._call_post("scene-list-add", json=payload)
+        result = self._call_post("scene-list-add", data=dumps(payload, default=vars))
 
         items_to_add: int = 1 if entity_ids is None else len(entity_ids)
         if result["data"] != items_to_add:
@@ -815,9 +856,9 @@ class Api:
     def scene_list_get(
         self,
         list_id: str,
-        dataset_name: Optional[str],
-        starting_number: Optional[int],
-        max_results: Optional[int],
+        dataset_name: Optional[str] = None,
+        starting_number: Optional[int] = None,
+        max_results: Optional[int] = None,
     ) -> List[Dict]:
         """
         Returns items in the given scene list.
@@ -826,12 +867,12 @@ class Api:
 
         :param list_id: User defined name for the list
         :type list_id: str
-        :param dataset_name: Dataset alias
-        :type dataset_name: Optional[str]
-        :param starting_number: Used to identify the start number to search from
-        :type starting_number: Optional[int]
-        :param max_results: How many results should be returned?
-        :type max_results: Optional[int]
+        :param dataset_name: Dataset alias, defaults to None
+        :type dataset_name: Optional[str], optional
+        :param starting_number: Used to identify the start number to search from, defaults to None
+        :type starting_number: Optional[int], optional
+        :param max_results: How many results should be returned?, defaults to None
+        :type max_results: Optional[int], optional
         :return: List of items in requested scene list. Each entry is a dictionary in the form of {'entityId', 'datasetName'}.
         :rtype: List[Dict]
         :raises HTTPError:
@@ -841,12 +882,12 @@ class Api:
         Api.scene_list_get(list_id="my_scene_list")
         """
         payload = {
-            "listID": list_id,
+            "listId": list_id,
             "datasetName": dataset_name,
             "startingNumber": starting_number,
             "maxResults": max_results,
         }
-        result = self._call_post("scene-list-get", json=payload)
+        result = self._call_post("scene-list-get", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -884,30 +925,30 @@ class Api:
         if entity_id is not None and entity_ids is not None:
             warnings.warn("Both entityId and entityIds given. Passing both to API.")
         payload = {
-            "listID": list_id,
+            "listId": list_id,
             "datasetName": dataset_name,
             "entityId": entity_id,
             "entityIds": entity_ids,
         }
-        _ = self._call_post("scene-list-remove", json=payload)
+        _ = self._call_post("scene-list-remove", data=dumps(payload, default=vars))
 
-    def scene_list_summary(self, list_id: str, dataset_name: Optional[str]) -> Dict:
+    def scene_list_summary(self, list_id: str, dataset_name: Optional[str] = None) -> Dict:
         """
         Returns summary information for a given list.
 
         :param list_id: User defined name for the list
         :type list_id: str
-        :param dataset_name: Dataset alias
-        :type dataset_name: Optional[str]
+        :param dataset_name: Dataset alias, defaults to None
+        :type dataset_name: Optional[str], optional
         :return: Dictionary containing a summary and datasets ({'summary', 'datasets'}).
         :rtype: Dict
         :raises HTTPError:
         """
         payload = {
-            "listID": list_id,
+            "listId": list_id,
             "datasetName": dataset_name,
         }
-        result = self._call_post("scene-list-summary", json=payload)
+        result = self._call_post("scene-list-summary", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -922,7 +963,7 @@ class Api:
         """
         # TODO list_filter would likely have to be the result of the MetadataFilter types, no?
         payload = {"listFilter": list_filter}
-        result = self._call_post("scene-list-types", json=payload)
+        result = self._call_post("scene-list-types", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -966,7 +1007,7 @@ class Api:
             "includeNullMetadataValues": include_null_metadata,
             "useCustomization": use_customization,
         }
-        result = self._call_post("scene-metadata", json=payload)
+        result = self._call_post("scene-metadata", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -1001,7 +1042,7 @@ class Api:
             "includeNullMetadataValues": include_null_metadata,
             "useCustomization": use_customization,
         }
-        result = self._call_post("scene-metadata-list", json=payload)
+        result = self._call_post("scene-metadata-list", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -1031,7 +1072,7 @@ class Api:
             "entityId": entity_id,
             "metadataType": metadata_type,
         }
-        result = self._call_post("scene-metadata-list", json=payload)
+        result = self._call_post("scene-metadata-list", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -1118,15 +1159,13 @@ class Api:
         :type exclude_list_name: Optional[str], optional
         :param include_null_metadata: Optional parameter to include null metadata values, defaults to None
         :type include_null_metadata: Optional[bool], optional
-        :return: Dictionary containing search results as List[Dict] together with some additional search meatadata
-        :rtype: Dict
-
         :raises HTTPError:
+        :return: Dictionary containing search results as List[Dict] together with some additional search meatadata (['recordsReturned', 'totalHits', 'totalHitsAccuracy', 'isCustomized', 'numExcluded', 'startingNumber', 'nextRecord'])
+        :rtype: Dict
 
         :Example:
 
         # General search
-
         Api.scene_search(
         "gls_all",
         max_results=500,
@@ -1164,7 +1203,7 @@ class Api:
             "excludeListName": exclude_list_name,
             "includeNullMetadataValue": include_null_metadata,
         }
-        result = self._call_post("scene-search", json=payload)
+        result = self._call_post("scene-search", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -1221,7 +1260,7 @@ class Api:
             "sortDirection": sort_direction,
             "temporalFilter": temporal_filter,
         }
-        result = self._call_post("scene-search-delete", json=payload, headers=self.headers)
+        result = self._call_post("scene-search-delete", data=dumps(payload, default=vars), headers=self.headers)
 
         return result["data"]
 
@@ -1295,7 +1334,7 @@ class Api:
             "orderListName": order_list_name,
             "excludeListName": exlucde_list_name,
         }
-        result = self._call_post("scene-search-secondary", json=payload)
+        result = self._call_post("scene-search-secondary", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -1315,7 +1354,7 @@ class Api:
         :raises HTTPError:
         """
         payload = {"systemId": system_id, "setting": setting}
-        result = self._call_post("user-preferences-get", json=payload)
+        result = self._call_post("user-preferences-get", data=dumps(payload, default=vars))
 
         return result["data"]
 
@@ -1360,6 +1399,6 @@ class Api:
         # TODO N° 2
         # TODO N° 3
         payload = {"systemId": system_id, "userPreferences": user_preferences}
-        _ = self._call_post("user-preferences-set", json=payload)
+        _ = self._call_post("user-preferences-set", data=dumps(payload, default=vars))
 
         return
