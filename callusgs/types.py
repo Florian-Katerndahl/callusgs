@@ -20,9 +20,9 @@ class AcquisitionFilter(EarthExplorerBaseType):
 
         .. note:: General data type
 
-        :param start: The date the scene began acquisition - ISO 8601 Formatted Date
+        :param start: The date the scene began acquisition - ISO 8601 Formatted Date (YYYY-MM-DD)
         :type start: str
-        :param end: The date the scene ended acquisition - ISO 8601 Formatted Date
+        :param end: The date the scene ended acquisition - ISO 8601 Formatted Date (YYYY-MM-DD)
         :type end: str
         """
         self.start: str = start
@@ -141,9 +141,9 @@ class IngestFilter(EarthExplorerBaseType):
 
         .. note:: General data type
 
-        :param start: Used to filter scenes by last metadata ingest
+        :param start: Used to filter scenes by last metadata ingest, YYYY-MM-DD format
         :type start: str
-        :param end: Used to filter scenes by last metadata ingest
+        :param end: Used to filter scenes by last metadata ingest, YYYY-MM-DD format
         :type end: str
         """
         self.start: str = start
@@ -152,51 +152,39 @@ class IngestFilter(EarthExplorerBaseType):
 
 class MetadataFilter(EarthExplorerBaseType):
     """This is an abstract data model, use MetadataAnd, MetadataBetween, MetadataOr, or MetadataValue"""
-    # TODO should take an iterable of other Metadata classes/types and store them as string?
-
-    def __init__(self, metadata: Any) -> None:
-        self.metadata: Any = metadata
+    pass
 
 
 class Metadata(EarthExplorerBaseType):
     """This is an abstract data model, use MetadataAnd, MetadataBetween, MetadataOr, or MetadataValue"""
-
-    def __init__(self, metadata: Any) -> None:
-        self.metadata: Any = metadata
+    pass
 
 
 class MetadataAnd(EarthExplorerBaseType):
     def __init__(
-        self, filter_type: str, child_filters: List[Union[MetadataFilter, Metadata]]
+        self, child_filters: List[Union[MetadataFilter, Metadata]]
     ) -> None:
         """
         Metadata And data type
 
         .. note:: General data type
 
-        :param filter_type: Value must be "and"
-        :type filter_type: str
         :param child_filters: Joins any filter parameters together with the "and" logical operator
         :type child_filters: List[Union[MetadataFilter, Metadata]]
         """
-        self.filterType: str = filter_type
+        self.filterType: str = "and"
         self.childFilters: List[Union[MetadataFilter, Metadata]] = child_filters
-
-    def __dict__(self):
-        return {self.child_filters.join(self.filter_type)}
 
 
 class MetadataBetween(EarthExplorerBaseType):
     def __init__(
-        self, filter_type: str, filter_id: str, first_value: int, second_value: int
+        self, filter_id: str, first_value: int, second_value: int
     ) -> None:
         """
         Matadata Between data type
 
         .. note:: General data type
 
-        :param filter_type: Value must be "between"
-        :type filter_type: str
         :param filter_id: Unique Identifier for the dataset criteria field and it can be retrieved by dataset-filters
         :type filter_id: str
         :param first_value: First value in between clause
@@ -204,7 +192,7 @@ class MetadataBetween(EarthExplorerBaseType):
         :param second_value: Second value in between clause
         :type second_value: int
         """
-        self.filterType: str = filter_type
+        self.filterType: str = "between"
         self.filterId: str = filter_id
         self.firstValue: int = first_value
         self.secondValue: int = second_value
@@ -212,19 +200,17 @@ class MetadataBetween(EarthExplorerBaseType):
 
 class MetadataOr(EarthExplorerBaseType):
     def __init__(
-        self, filter_type: str, child_filters: List[Union[MetadataFilter, Metadata]]
+        self, child_filters: List[Union[MetadataFilter, Metadata]]
     ) -> None:
         """
         Metadata Or data type
 
         .. note:: General data type
 
-        :param filter_type: Value must be "or"
-        :type filter_type: str
         :param child_filters: Joins any filter parameters with the "or" logical operator
         :type child_filters: List[Union[MetadataFilter, Metadata]]
         """
-        self.filterType: str = filter_type
+        self.filterType: str = "or"
         self.childFilters: List[Union[MetadataFilter, Metadata]] = child_filters
 
 
@@ -252,43 +238,41 @@ class MetadataValue(EarthExplorerBaseType):
 
 class SpatialFilter(EarthExplorerBaseType):
     """This is an abstract data model, use SpatialFilterMbr or SpatialFilterGeoJson"""
-
     pass
 
 
 class SceneFilter(EarthExplorerBaseType):
     def __init__(
         self,
-        acquisition_filter: AcquisitionFilter,
-        cloudcover_filter: CloudCoverFilter,
-        dataset_name: str,
-        ingest_filter: IngestFilter,
-        metadata_filter: MetadataFilter,
-        seasonal_filter: List[int],
-        spatial_filter: SpatialFilter,
+        acquisition_filter: Optional[AcquisitionFilter] = None,
+        cloudcover_filter: Optional[CloudCoverFilter] = None,
+        dataset_name: Optional[str] = None,
+        ingest_filter: Optional[IngestFilter] = None,
+        metadata_filter: Optional[MetadataFilter] = None,
+        seasonal_filter: Optional[List[int]] = None,
+        spatial_filter: Optional[SpatialFilter] = None,
     ) -> None:
-    # TODO can't most of this made optional?
         """
         Scene Filter data type
 
         .. note:: General data type
 
-        :param acquisition_filter: Used to apply a acquisition filter on the data
-        :type acquisition_filter: AcquisitionFilter
-        :param cloudcover_filter: Used to apply a cloud cover filter on the data
-        :type cloudcover_filter: CloudCoverFilter
-        :param dataset_name: Dataset name
-        :type dataset_name: str
-        :param ingest_filter: Used to apply an ingest filter on the data
-        :type ingest_filter: IngestFilter
-        :param metadata_filter: Used to apply a metadata filter on the data
-        :type metadata_filter: MetadataFilter
-        :param seasonal_filter: Used to apply month numbers from 1 to 12 on the data
-        :type seasonal_filter: List[int]
-        :param spatial_filter: Used to apply a spatial filter on the data
-        :type spatial_filter: SpatialFilter
+        :param acquisition_filter: Used to apply a acquisition filter on the data, defaults to None
+        :type acquisition_filter: Optional[AcquisitionFilter], optional
+        :param cloudcover_filter: Used to apply a cloud cover filter on the data, defaults to None
+        :type cloudcover_filter: Optional[CloudCoverFilter], optional
+        :param dataset_name: Dataset name, defaults to None
+        :type dataset_name: Optional[str], optional
+        :param ingest_filter: Used to apply an ingest filter on the data, defaults to None
+        :type ingest_filter: Optional[IngestFilter], optional
+        :param metadata_filter: Used to apply a metadata filter on the data, defaults to None
+        :type metadata_filter: Optional[MetadataFilter], optional
+        :param seasonal_filter: Used to apply month numbers from 1 to 12 on the data, defaults to None
+        :type seasonal_filter: Optional[List[int]], optional
+        :param spatial_filter: Used to apply a spatial filter on the data, defaults to None
+        :type spatial_filter: Optional[SpatialFilter], optional
         """
-        self.acqusitionFilter: AcquisitionFilter = acquisition_filter
+        self.acquisitionFilter: AcquisitionFilter = acquisition_filter
         self.cloudCoverFilter: CloudCoverFilter = cloudcover_filter
         self.datasetName: str = dataset_name
         self.ingestFilter: IngestFilter = ingest_filter
@@ -334,7 +318,6 @@ class SceneMetadataConfig(EarthExplorerBaseType):
 
 class SpatialBounds(EarthExplorerBaseType):
     """This is an abstract data model, use spatialBoundsMbr or geoJson"""
-
     pass
 
 
@@ -358,6 +341,21 @@ class SpatialBoundsMbr(EarthExplorerBaseType):
         self.east: str = east
         self.south: str = south
         self.west: str = west
+
+
+class SpatialFilterMbr(EarthExplorerBaseType):
+    def __init__(self, lower_left: Coordinate, upper_right: Coordinate) -> None:
+        """
+        Spatial Filter Mbr (minimum bound rectangle) data type
+
+        :param lower_left: The southwest point of the minimum bounding rectangle
+        :type lower_left: Coordinate
+        :param upper_right: The northeast point of the minimum bounding rectangle
+        :type upper_right: Coordinate
+        """        
+        self.filterType: str = "mbr"
+        self.lowerLeft = lower_left
+        self.upperRight = upper_right
 
 
 class SpatialFilterGeoJson(EarthExplorerBaseType):
