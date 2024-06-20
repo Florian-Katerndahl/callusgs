@@ -24,8 +24,8 @@ classifiers = [
 [tool.poetry.dependencies]
 python = "^3.9"
 requests = "^2.32.3"
-shapely = "^2.0.4"
 tqdm = "^4.66.4"
+fiona = "^1.9.6"
 
 
 [tool.poetry.group.test.dependencies]
