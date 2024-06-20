@@ -1,0 +1,26 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: callusgs
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Florian
+    family-names: Katerndahl
+    email: florian@katerndahl.com
+repository-code: 'https://github.com/Florian-Katerndahl/callusgs'
+abstract: >-
+  callusgs Aims To Be A Complete Implementation Of USGS's
+  machine-to-machine API (v1.5.0)
+keywords:
+  - api
+  - cli
+  - gis
+  - geodata
+  - landsat
+  - usgs
+  - machine-to-machine
+license: GPL-2.0
