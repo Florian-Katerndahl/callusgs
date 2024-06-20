@@ -3,7 +3,7 @@ API Class representing USGS's machine-to-machine API: https://m2m.cr.usgs.gov/ap
 """
 
 from pathlib import Path
-from typing import Optional, Any, Dict, List, Literal
+from typing import Optional, Any, Dict, List, Literal, Callable
 from datetime import datetime
 from json import loads, dumps
 from urllib.parse import unquote
@@ -191,7 +191,7 @@ class Api:
         dataset_filter: Optional[str] = None,
     ) -> Dict:
         """
-         This method is used to search datasets under the categories.
+        This method is used to search datasets under the categories.
 
         :param catalog: Used to identify datasets that are associated with a given application, defaults to None
         :type catalog: Optional[str], optional
@@ -523,10 +523,8 @@ class Api:
         :raises GeneralEarthExplorerException:
         """
         payload = {"downloadApplication": download_application, "label": label}
-        result = self._call_post("download-order-remove", data=dumps(payload, default=vars))
+        _ = self._call_post("download-order-remove", data=dumps(payload, default=vars))
 
-        if result["data"] != 2:
-            raise GeneralEarthExplorerException("Value of data section is not 2")
 
     def download_remove(self, download_id: int) -> None:
         """
@@ -602,8 +600,8 @@ class Api:
 
         # https://www.slingacademy.com/article/python-requests-module-how-to-download-files-from-urls/
         with open(output_directory / file_name, "wb") as f, \
-             tqdm(desc=file_name, total=download_size, unit="kB",
-             unit_scale=True, unit_divisor=chunk_size) as bar:
+             tqdm(desc=file_name, total=download_size, unit="B",
+             unit_scale=True, unit_divisor=1024) as bar:
              for chunk in result.iter_content(chunk_size=chunk_size):
                 bytes_written = f.write(chunk)
                 bar.update(bytes_written)
@@ -612,7 +610,7 @@ class Api:
 
     def grid2ll(
         self,
-        grid_type: Optional[Literal["WRS1", "WRS2"]],
+        grid_type: Optional[Literal["WRS1", "WRS2"]] = "WRS2",
         response_shape: Optional[Literal["polygon", "point"]] = None,
         path: Optional[str] = None,
         row: Optional[str] = None,
@@ -620,7 +618,7 @@ class Api:
         """
         Used to translate between known grids and coordinates.
 
-        :param grid_type: Which grid system is being used?
+        :param grid_type: Which grid system is being used?, defaults to "WRS2"
         :type grid_type: Optional[Literal["WRS1", "WRS2"]], optional
         :param response_shape: What type of geometry should be returned - a bounding box polygon or a center point?, defaults to None
         :type response_shape: Optional[Literal["polygon", "point"]], optional
@@ -894,9 +892,9 @@ class Api:
     def scene_list_remove(
         self,
         list_id: str,
-        dataset_name: Optional[str],
-        entity_id: Optional[str],
-        entity_ids: Optional[List[str]],
+        dataset_name: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        entity_ids: Optional[List[str]] = None,
     ):
         """
         Removes items from the given list. If no datasetName is provided, the call removes
@@ -906,12 +904,12 @@ class Api:
 
         :param list_id: User defined name for the list
         :type list_id: str
-        :param dataset_name: Dataset alias
-        :type dataset_name: Optional[str]
-        :param entity_id: Scene Identifier
-        :type entity_id: Optional[str]
-        :param entity_ids: A list of Scene Identifiers
-        :type entity_ids: Optional[List[str]]
+        :param dataset_name: Dataset alias, defaults to None
+        :type dataset_name: Optional[str], optional
+        :param entity_id: Scene Identifier, defaults to None
+        :type entity_id: Optional[str], optional
+        :param entity_ids: A list of Scene Identifiers, defaults to None
+        :type entity_ids: Optional[List[str]], optional
         :raises HTTPError:
 
         :Example:
