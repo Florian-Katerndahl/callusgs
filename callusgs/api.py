@@ -1397,7 +1397,6 @@ class Api:
         Api.user_preferences_set("EE", preferences)
         """
         # TODO N° 2
-        # TODO N° 3
         payload = {"systemId": system_id, "userPreferences": user_preferences}
         _ = self._call_post("user-preferences-set", data=dumps(payload, default=vars))
 
