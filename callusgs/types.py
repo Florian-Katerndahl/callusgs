@@ -2,7 +2,6 @@
 Implementation of USGS's machine-to-machine API data types: https://m2m.cr.usgs.gov/api/docs/datatypes/
 """
 
-# TODO ensure serializability via json.dumps(instance.__dict__)
 from datetime import datetime
 from json import dumps
 from typing import List, Any, Union, Optional
@@ -87,19 +86,24 @@ class TemplateConfiguration(EarthExplorerBaseType):
 
 
 class GeoJson(EarthExplorerBaseType):
-    def __init__(self, type: str, coordinates: List[Coordinate]) -> None:
+    def __init__(self, type: str, coordinates: Union[List[float], List[List[float]]]) -> None:
+        # TODO check if warning is correct, Landsatxplore had a similar approach to mine and this seems to work
+        #  for Mbr filter, using coordinates did indeed work...
         """
         GeoJson data type
 
         .. note:: General data type
 
+        .. warning:: In contrast to the documentation, coordinates must be an array
+            of floats (coordinate pairs) and not instances of Coordinate object!
+
         :param type: Geometry types supported by GeoJson, like polygon
         :type type: str
         :param coordinates: Coordinate array
-        :type coordinates: List[Coordinate]
+        :type coordinates: Union[List[float], List[List[float]]]
         """
         self.type: str = type
-        self.coordinates: List[Coordinate] = coordinates
+        self.coordinates: Union[List[float], List[List[float]]] = coordinates
 
 
 class IngestUpdateTemplate(EarthExplorerBaseType):
@@ -359,18 +363,16 @@ class SpatialFilterMbr(EarthExplorerBaseType):
 
 
 class SpatialFilterGeoJson(EarthExplorerBaseType):
-    def __init__(self, filter_type: str, geo_json: GeoJson) -> None:
+    def __init__(self, geo_json: GeoJson) -> None:
         """
         Spatial Filter GeoJson data type
 
         .. note:: General data type
 
-        :param filter_type: value must be "geojson"
-        :type filter_type: str
         :param geo_json: A GeoJson object representing a region of space
         :type geo_json: GeoJson
         """
-        self.filterType: str = filter_type
+        self.filterType: str = "geojson"
         self.geoJson: GeoJson = geo_json
 
 
