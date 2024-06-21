@@ -11,7 +11,7 @@ Implementation of USGS's machine-to-machine API
 ### Prerequisites
 
 - account at USGS
-- access to m2m
+- access to m2m MACHINE, otherwise: see resticions
 
 Install the package together with the respective command line applications from pip.
 
@@ -26,7 +26,7 @@ For more detailed usage instructions and/or examples, please refer to the docume
 ### Command line tool
 
 ```bash
-callusgs search...
+callusgs search
 ```
 
 ```bash
@@ -34,11 +34,15 @@ callusgs download
 ```
 
 ```bash
-callusgs download
+callusgs landsat
 ```
 
 ```bash
 callusgs geocode
+```
+
+```bash
+callusgs grid2ll
 ```
 
 ## Documentation
