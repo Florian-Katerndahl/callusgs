@@ -167,6 +167,10 @@ class Api:
         result = self._call_post("dataset-browse", data=dumps(payload, default=vars))
 
         return result["data"]
+    
+    def dataset_bulk_products(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
 
     def dataset_catalogs(self) -> Dict:
         """
@@ -260,6 +264,14 @@ class Api:
         result = self._call_post("dataset-coverage", data=dumps(payload, default=vars))
 
         return result["data"]
+    
+    def dataset_download_options(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
+
+    def dataset_file_groups(self):        
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
 
     def dataset_filters(self, dataset_name: str) -> Dict:
         """
@@ -343,6 +355,10 @@ class Api:
         result = self._call_post("dataset-metadata", data=dumps(payload, default=vars))
 
         return result["data"]
+    
+    def dataset_order_products(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
 
     def dataset_search(
         self,
@@ -476,6 +492,10 @@ class Api:
         result = self._call_post("download-complete-proxied", data=dumps(payload, default=vars))
 
         return result["data"]
+    
+    def download_eula(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
 
     def download_labels(self, download_application: Optional[str] = None) -> List[Dict]:
         # TODO 4
@@ -491,12 +511,19 @@ class Api:
         result = self._call_post("download-labels", data=dumps(payload, default=vars))
 
         return result["data"]
+    
+    def download_options(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
 
     def download_order_load(
         self, download_application: Optional[str] = None, label: Optional[str] = None
     ) -> List[Dict]:
+        # TODO how do I get the label of an order? There's is download-order in one of the examples, but is this correct?
         """
         This method is used to prepare a download order for processing by moving the scenes into the queue for processing.
+
+        .. note:: label must be label of order.
 
         :param download_application: Used to denote the application that will perform the download, defaults to None
         :type download_application: Optional[str], optional
@@ -541,6 +568,10 @@ class Api:
 
         if result["data"] is not True:
             raise GeneralEarthExplorerException("Removal returned False")
+        
+    def download_request(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
 
     def download_retrieve(
         self, download_application: Optional[str] = None, label: Optional[str] = None
@@ -588,20 +619,25 @@ class Api:
         result = self._call_post("download-search", data=dumps(payload, default=vars))
 
         return result["data"]
+    
+    def download_summary(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
 
-    def download(self, url: str, output_directory: Optional[Path] = Path("."), chunk_size: int = 2048) -> None:
-        # https://stackoverflow.com/questions/31804799/how-to-get-pdf-filename-with-python-requests
+    def download(self, url: str, output_directory: Optional[Path] = Path("."), chunk_size: int = 1024, no_progess: Optional[bool] = False) -> None:
+        # TODO N° 5
         result = self._call_get(url)
         result.raise_for_status()
 
         file_name = unquote(result.headers["content-disposition"].split("filename=").pop().strip('"'))
         download_size = int(result.headers["content-length"])
-        print(download_size)
 
-        # https://www.slingacademy.com/article/python-requests-module-how-to-download-files-from-urls/
+        if not output_directory.exists():
+            output_directory.mkdir()
+
         with open(output_directory / file_name, "wb") as f, \
              tqdm(desc=file_name, total=download_size, unit="B",
-             unit_scale=True, unit_divisor=1024) as bar:
+             unit_scale=True, unit_divisor=1024, leave=False, disable=no_progess) as bar:
              for chunk in result.iter_content(chunk_size=chunk_size):
                 bytes_written = f.write(chunk)
                 bar.update(bytes_written)
@@ -756,6 +792,14 @@ class Api:
         results = self._call_post("notifications", data=dumps(payload, default=vars))
 
         return results["data"]
+    
+    def order_products(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
+    
+    def order_submit(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
 
     def permissions(self) -> List[str]:
         """
@@ -792,6 +836,10 @@ class Api:
         result = self._call_post("placename", data=dumps(payload, default=vars))
 
         return result["data"]["results"]
+    
+    def rate_limit_summary(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
 
     def scene_list_add(
         self,
@@ -1335,6 +1383,34 @@ class Api:
         result = self._call_post("scene-search-secondary", data=dumps(payload, default=vars))
 
         return result["data"]
+    
+    def tram_order_detail_update(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
+
+    def tram_order_details(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
+
+    def tram_order_details_clear(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
+
+    def tram_order_details_remove(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
+
+    def tram_order_search(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
+
+    def tram_order_status(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
+
+    def tram_order_units(self):
+        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+        pass
 
     def user_preferences_get(
         self, system_id: Optional[str] = None, setting: Optional[List[str]] = None
