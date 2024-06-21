@@ -3,5 +3,23 @@
 CLI Tools
 =========
 
-`callUSGS` provides different command line interface tools. They provide limited accessibilty to the entire API-impelementation but in
-return offer easier usage.
+General API Tools
+-----------------
+
+Search
+^^^^^^
+
+Download
+^^^^^^^^
+
+Geocoding
+^^^^^^^^^
+
+WRS1/WRS2 to and from coordinates
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Product Specific API Tools
+--------------------------
+
+Landsat Collection 2 Level 2
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
