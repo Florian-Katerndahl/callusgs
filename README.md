@@ -51,7 +51,7 @@ See the docs folder for raw documentation or visit [callusgs.readthedocs.io](htt
 
 ## License
 
-`callusgs` is licensed under the GPL-v2.
+`callusgs` is licensed under the [GPL-v2](LICENSE).
 
 ## Citation
 
