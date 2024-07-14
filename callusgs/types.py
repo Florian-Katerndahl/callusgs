@@ -4,7 +4,25 @@ Implementation of USGS's machine-to-machine API data types: https://m2m.cr.usgs.
 
 from datetime import datetime
 from json import dumps
-from typing import List, Any, Union, Optional
+from typing import List, Any, Union, Optional, Dict
+
+from callusgs.errors import ErrorCodes
+
+
+class ApiResponse:
+    """
+    Custom data type to represent Api response objects.
+    """
+    def __init__(self, data: Union[Dict, List[Dict]], version: str, error_code: str, request_id: str, session_id: str, error_message: str) -> None:
+        self.data: Union[Dict, List[Dict]] = data
+        self.version: str = version
+        self.error_code: str = error_code
+        self.error_message: str = error_message
+        self.request_id: str = request_id
+        self.session_id: str = session_id
+
+    def raise_status(self) -> None:
+        raise ErrorCodes()(self.error_code)
 
 
 class EarthExplorerBaseType:

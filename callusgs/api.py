@@ -3,7 +3,7 @@ API Class representing USGS's machine-to-machine API: https://m2m.cr.usgs.gov/ap
 """
 
 from pathlib import Path
-from typing import Optional, Any, Dict, List, Literal, Callable
+from typing import Optional, Any, Dict, List, Literal, Union
 from datetime import datetime
 from json import loads, dumps
 from urllib.parse import unquote
@@ -23,14 +23,27 @@ from callusgs.types import (
     SearchSort,
     FileGroups,
     ProxiedDownload,
+    DownloadInput,
+    FilepathDownload,
+    FilegroupDownload,
+    ApiResponse,
+    ProductInput,
 )
-from callusgs.errors import AuthenticationEarthExplorerException, GeneralEarthExplorerException
+from callusgs.errors import (
+    AuthenticationEarthExplorerException,
+    GeneralEarthExplorerException,
+)
 
 
 class Api:
     ENDPOINT: str = "https://m2m.cr.usgs.gov/api/api/json/stable/"
 
-    def __init__(self, method: Optional[str] = "token", user: Optional[str] = None, auth: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        method: Optional[str] = "token",
+        user: Optional[str] = None,
+        auth: Optional[str] = None,
+    ) -> None:
         self.key: Optional[str] = None
         self.login_timestamp: Optional[datetime] = None
         self.headers: Dict[str, str] = None
@@ -66,11 +79,15 @@ class Api:
         :type stream: Optional[bool], optional
         :return: Response object
         :rtype: requests.Response
-        """        
+        """
         return requests.get(url, headers=self.headers, stream=stream)
 
     def _call_post(
-        self, endpoint: str, conversion: Optional[Literal["text", "binary"]] = "text", /, **kwargs
+        self,
+        endpoint: str,
+        conversion: Optional[Literal["text", "binary"]] = "text",
+        /,
+        **kwargs,
     ) -> Dict:
         """
         Abstract method to call API endpoints with POST method
@@ -91,12 +108,18 @@ class Api:
         :rtype: Dict
         """
         SECONDS_PER_HOUR: int = 3600
-        if self.login_timestamp is not None and (datetime.now() - self.login_timestamp).total_seconds() >= SECONDS_PER_HOUR * 2:
+        if (
+            self.login_timestamp is not None
+            and (datetime.now() - self.login_timestamp).total_seconds()
+            >= SECONDS_PER_HOUR * 2
+        ):
             raise AuthenticationEarthExplorerException(
                 "Two hours have passed since you logged in, api session token expired. Please login again!"
             )
 
-        with requests.post(Api.ENDPOINT + endpoint, headers=self.headers, **kwargs) as r:
+        with requests.post(
+            Api.ENDPOINT + endpoint, headers=self.headers, **kwargs
+        ) as r:
             if conversion == "text":
                 message_content: Dict = loads(r.text)
             elif conversion == "binary":
@@ -130,7 +153,9 @@ class Api:
 
         return result["data"]
 
-    def dataset(self, dataset_id: Optional[str] = None, dataset_name: Optional[str] = None) -> Dict:
+    def dataset(
+        self, dataset_id: Optional[str] = None, dataset_name: Optional[str] = None
+    ) -> Dict:
         """
         This method is used to retrieve the dataset by id or name.
 
@@ -167,10 +192,24 @@ class Api:
         result = self._call_post("dataset-browse", data=dumps(payload, default=vars))
 
         return result["data"]
-    
-    def dataset_bulk_products(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+
+    def dataset_bulk_products(self, dataset_name: Optional[str] = None) -> List[Dict]:
+        """
+        Lists all available bulk products for a dataset - this does not guarantee scene availability.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param dataset_name: Used to identify the which dataset to return results for, defaults to None
+        :type dataset_name: Optional[str], optional
+        :return: List of dictionaries containing bulk download information
+        :rtype: List[Dict]
+        """
+        payload = {"datasetName": dataset_name}
+        result = self._call_post(
+            "dataset-bulk-products", data=dumps(payload, default=vars)
+        )
+
+        return result["data"]
 
     def dataset_catalogs(self) -> Dict:
         """
@@ -220,7 +259,9 @@ class Api:
             "parentId": parent_id,
             "datasetFilter": dataset_filter,
         }
-        result = self._call_post("dataset-categories", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "dataset-categories", data=dumps(payload, default=vars)
+        )
 
         return result["data"]
 
@@ -246,7 +287,9 @@ class Api:
             "metadataType": metadata_type,
             "fileGroupIds": file_group_ids,
         }
-        result = self._call_post("dataset-clear-customization", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "dataset-clear-customization", data=dumps(payload, default=vars)
+        )
 
         if result["data"] != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
@@ -264,14 +307,48 @@ class Api:
         result = self._call_post("dataset-coverage", data=dumps(payload, default=vars))
 
         return result["data"]
-    
-    def dataset_download_options(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
 
-    def dataset_file_groups(self):        
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+    def dataset_download_options(
+        self, dataset_name: str, scene_filter: Optional[SceneFilter] = None
+    ) -> List[Dict]:
+        """
+        This request lists all available products for a given dataset.
+
+        .. warning:: Product listed here does not guarantee scene availability!
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param dataset_name: Used to identify the which dataset to return results for
+        :type dataset_name: str
+        :param scene_filter: Used to filter data within the dataset, defaults to None
+        :type scene_filter: Optional[SceneFilter], optional
+        :return: List of available products
+        :rtype: List[Dict]
+        """
+        payload = {"datasetName": dataset_name, "sceneFilter": scene_filter}
+        result = self._call_post(
+            "dataset-download-options", data=dumps(payload, default=vars)
+        )
+
+        return result["data"]
+
+    def dataset_file_groups(self, dataset_name: str) -> Dict:
+        """
+        This method is used to list all configured file groups for a dataset.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param dataset_name: Dataset alias
+        :type dataset_name: str
+        :return: Primary and secondary file group information
+        :rtype: Dict
+        """
+        payload = {"datasetName": dataset_name}
+        result = self._call_post(
+            "dataset-file-groups", data=dumps(payload, default=vars)
+        )
+
+        return result["data"]
 
     def dataset_filters(self, dataset_name: str) -> Dict:
         """
@@ -297,12 +374,16 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post("dataset-get-customization", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "dataset-get-customization", data=dumps(payload, default=vars)
+        )
 
         return result["data"]
 
     def dataset_get_customizations(
-        self, dataset_names: Optional[List[str]] = None, metadata_type: Optional[List[str]] = str
+        self,
+        dataset_names: Optional[List[str]] = None,
+        metadata_type: Optional[List[str]] = str,
     ) -> Dict:
         """
         This method is used to retrieve metadata customizations for multiple datasets at once.
@@ -315,7 +396,9 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetNames": dataset_names, "metadataType": metadata_type}
-        result = self._call_post("dataset-get-customizations", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "dataset-get-customizations", data=dumps(payload, default=vars)
+        )
 
         return result["data"]
 
@@ -337,7 +420,11 @@ class Api:
         :return: Dict containing notices per dataset supplied
         :rtype: Dict
         """
-        payload = {"catalog": catalog, "datasetName": dataset_name, "datasetNames": dataset_names}
+        payload = {
+            "catalog": catalog,
+            "datasetName": dataset_name,
+            "datasetNames": dataset_names,
+        }
         result = self._call_post("dataset-messages", data=dumps(payload, default=vars))
 
         return result["data"]
@@ -355,10 +442,42 @@ class Api:
         result = self._call_post("dataset-metadata", data=dumps(payload, default=vars))
 
         return result["data"]
-    
-    def dataset_order_products(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+
+    def dataset_order_products(self, dataset_name: str) -> List[Dict]:
+        """
+        Lists all available order products for a dataset.
+
+        .. warning:: Product listed here does not guarantee scene availability!
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param dataset_name: Used to identify the which dataset to return results for
+        :type dataset_name: str
+        :return: List of all products available for given dataset name
+        :rtype: List[Dict]
+
+        :Example:
+
+        Api.dataset_order_products("landsat_ot_c2_l2")
+
+        # [
+        #    {
+        #        "productCode": "LO220",
+        #        "productName": "L8-9 Collection 2 Level 1 and Level 2 Std Products from Level 0 input"
+        #    },
+        #    {
+        #        "productCode": "LO221",
+        #        "productName": "L8-9 Collection 2 Level 2 Std product from Level 1 input"
+        #    },
+        #    ...,
+        # ]
+        """
+        payload = {"datasetName": dataset_name}
+        result = self._call_post(
+            "dataset-order-products", data=dumps(payload, default=vars)
+        )
+
+        return result["data"]
 
     def dataset_search(
         self,
@@ -460,12 +579,16 @@ class Api:
             "searchSort": search_sort,
             "fileGroups": file_groups,
         }
-        result = self._call_post("dataset-set-customization", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "dataset-set-customization", data=dumps(payload, default=vars)
+        )
 
         if result["data"] != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
 
-    def dataset_set_customizations(self, dataset_customization: DatasetCustomization) -> None:
+    def dataset_set_customizations(
+        self, dataset_customization: DatasetCustomization
+    ) -> None:
         """
         This method is used to create or update customizations for multiple datasets at once.
 
@@ -474,12 +597,16 @@ class Api:
         :raises GeneralEarthExplorerException:
         """
         payload = {"datasetCustomization": dataset_customization}
-        result = self._call_post("dataset-set-customizations", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "dataset-set-customizations", data=dumps(payload, default=vars)
+        )
 
         if result["data"] != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
 
-    def download_complete_proxied(self, proxied_downloads: List[ProxiedDownload]) -> Dict:
+    def download_complete_proxied(
+        self, proxied_downloads: List[ProxiedDownload]
+    ) -> Dict:
         """
         Updates status to 'C' with total downloaded file size for completed proxied downloads.
 
@@ -489,13 +616,31 @@ class Api:
         :rtype: Dict
         """
         payload = {"proxiedDownloads": proxied_downloads}
-        result = self._call_post("download-complete-proxied", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "download-complete-proxied", data=dumps(payload, default=vars)
+        )
 
         return result["data"]
-    
-    def download_eula(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+
+    def download_eula(
+        self, eula_code: Optional[str] = None, eula_codes: Optional[List[str]] = None
+    ) -> List[Dict]:
+        """
+        Gets the contents of a EULA from the eulaCodes.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param eula_code: Used to specify a single eula, defaults to None
+        :type eula_code: Optional[str], optional
+        :param eula_codes: Used to specify multiple eulas, defaults to None
+        :type eula_codes: Optional[List[str]], optional
+        :return: List of EULAs
+        :rtype: List[Dict]
+        """
+        payload = {"eulaCode": eula_code, "eulaCodes": eula_codes}
+        result = self._call_post("download-eula", data=dumps(payload, default=vars))
+
+        return result["data"]
 
     def download_labels(self, download_application: Optional[str] = None) -> List[Dict]:
         # TODO 4
@@ -511,10 +656,44 @@ class Api:
         result = self._call_post("download-labels", data=dumps(payload, default=vars))
 
         return result["data"]
-    
-    def download_options(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+
+    def download_options(
+        self,
+        dataset_name: str,
+        entity_ids: Optional[Union[str, List[str]]] = None,
+        list_id: Optional[str] = None,
+        include_secondary_file_groups: Optional[bool] = None,
+    ) -> List[Dict]:
+        """
+        The download options request is used to discover downloadable products for each dataset. If a download is marked as not available, an order must be placed to generate that product.
+
+        .. note:: "listId" is the id of the customized list which is built by scene-list-add.
+            The parameter entityIds can be either a string array or a string. If passing them in a string, separate them by comma (no space between the IDs).
+            If passing them in the test page, use string without quotes/spaces/brackets, just pass entityIds with commas, for example,
+            LT50290302005219EDC00,LE70820552011359EDC00
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param dataset_name: Dataset alias
+        :type dataset_name: str
+        :param entity_ids: List of scenes, defaults to None
+        :type entity_ids: Optional[Union[str, List[str]]], optional
+        :param list_id: Used to identify the list of scenes to use, defaults to None
+        :type list_id: Optional[str], optional
+        :param include_secondary_file_groups: Optional parameter to return file group IDs with secondary products, defaults to None
+        :type include_secondary_file_groups: Optional[bool], optional
+        :return: List of all available download options for a given datset
+        :rtype: List[Dict]
+        """
+        payload = {
+            "datasetName": dataset_name,
+            "entityIds": entity_ids,
+            "listId": list_id,
+            "includeSecondaryFileGroups": include_secondary_file_groups,
+        }
+        result = self._call_post("download-options", data=dumps(payload, default=vars))
+
+        return result["data"]
 
     def download_order_load(
         self, download_application: Optional[str] = None, label: Optional[str] = None
@@ -533,12 +712,16 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"downloadApplication": download_application, "label": label}
-        result = self._call_post("download-order-load", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "download-order-load", data=dumps(payload, default=vars)
+        )
 
         return result["data"]
 
     def download_order_remove(
-        self, label: str, download_application: Optional[str] = None, 
+        self,
+        label: str,
+        download_application: Optional[str] = None,
     ) -> None:
         """
         This method is used to remove an order from the download queue.
@@ -551,7 +734,6 @@ class Api:
         """
         payload = {"downloadApplication": download_application, "label": label}
         _ = self._call_post("download-order-remove", data=dumps(payload, default=vars))
-
 
     def download_remove(self, download_id: int) -> None:
         """
@@ -568,10 +750,79 @@ class Api:
 
         if result["data"] is not True:
             raise GeneralEarthExplorerException("Removal returned False")
-        
-    def download_request(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+
+    def download_request(
+        self,
+        configuration_code: Optional[
+            Literal["no_data", "test", "order", "order+email", "null"]
+        ] = None,
+        download_application: Optional[str] = "M2M",
+        downloads: Optional[List[DownloadInput]] = None,
+        data_paths: Optional[List[FilepathDownload]] = None,
+        label: Optional[str] = None,
+        system_id: Optional[str] = "M2M",
+        data_groups: Optional[List[FilegroupDownload]] = None,
+    ) -> Dict:
+        """
+        This method is used to insert the requested downloads into the download queue and returns the available download URLs.
+
+        Each ID supplied in the downloads parameter you provide will be returned in one of three elements:
+
+            - availableDownloads: URLs provided in this list are immediately available; note that these URLs take you to other distribution systems that may require authentication
+            - preparingDownloads: IDs have been accepted but the URLs are NOT YET available for use
+            - failed: IDs were rejected; see the errorMessage field for an explanation
+
+        Other information is also provided in the response:
+
+            - newRecords: Includes a downloadId for each element of the downloads parameter that was accepted and a label that applies to the whole request
+            - duplicateProducts: Requests that duplicate previous requests by the same user; these are not re-added to the queue and are not included in newRecords
+            - numInvalidScenes: The number of products that could not be found by ID or failed to be requested for any reason
+            - remainingLimits: The number of remaining downloads to hit the rate limits by user and IP address
+                - limitType: The type of the limits are counted by, the value is either 'user' or 'ip'
+                - username: The user name associated with the request
+                - ipAddress: The IP address associated with the request
+                - recentDownloadCount: The number of downloads requested in the past 15 minutes
+                - pendingDownloadCount: The number of downloads in pending state before they are available for download
+                - unattemptedDownloadCount: The number of downloads in available status but the user has not downloaded yet
+
+
+        .. warning:: This API may be online while the distribution systems are unavailable. When this occurs, you will recieve the following error when requesting products that belong to any of these systems: 'This download has been temporarily disabled. Please try again at a later time. We apologize for the inconvenience.'. Once the distribution system is back online, this error will stop occuring and download requests will succeed.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param configuration_code: Used to customize the the download routine, primarily for testing, defaults to None
+        :type configuration_code: Optional[Literal["no_data", "test", "order", "order+email", "null"]], optional
+        :param download_application: Used to denote the application that will perform the download. Internal use only!, defaults to "M2M"
+        :type download_application: Optional[str], optional
+        :param downloads: Used to identify higher level products that this data may be used to create, defaults to None
+        :type downloads: Optional[List[DownloadInput]], optional
+        :param data_paths: Used to identify products by data path, specifically for internal automation and DDS functionality, defaults to None
+        :type data_paths: Optional[List[FilepathDownload]], optional
+        :param label: If this value is passed it will overide all individual download label values, defaults to None
+        :type label: Optional[str], optional
+        :param system_id: Identifies the system submitting the download/order. Internal use only!, defaults to None
+        :type system_id: Optional[str], optional
+        :param data_groups: Identifies the products by file groups, defaults to None
+        :type data_groups: Optional[List[FilegroupDownload]], optional
+        :raises ValueError: When download_application or system_id do not equal "M2M.
+        :return: Dict of available downloads, downloads in prepration and failed requests
+        :rtype: Dict
+        """
+        if download_application != "M2M" or system_id != "M2M":
+            raise ValueError
+
+        payload = {
+            "configurationCode": configuration_code,
+            "downloadApplication": download_application,
+            "downloads": downloads,
+            "dataPaths": data_paths,
+            "label": label,
+            "systemId": system_id,
+            "dataGroups": data_groups,
+        }
+        result = self._call_post("download-request", data=dumps(payload, default=vars))
+
+        return result["data"]
 
     def download_retrieve(
         self, download_application: Optional[str] = None, label: Optional[str] = None
@@ -619,26 +870,65 @@ class Api:
         result = self._call_post("download-search", data=dumps(payload, default=vars))
 
         return result["data"]
-    
-    def download_summary(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
 
-    def download(self, url: str, output_directory: Optional[Path] = Path("."), chunk_size: int = 1024, no_progess: Optional[bool] = False) -> None:
+    def download_summary(
+        self, download_application: str, label: str, send_email: Optional[bool]
+    ) -> ApiResponse:
+        """
+        Gets a summary of all downloads, by dataset, for any matching labels.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param download_application: Used to denote the application that will perform the download
+        :type download_application: str
+        :param label: Determines which downloads to return
+        :type label: str
+        :param send_email: If set to true, a summary email will also be sent
+        :type send_email: Optional[bool]
+        :return: Information about downloaded files
+        :rtype: ApiResponse
+        """
+        payload = {
+            "downloadApplication": download_application,
+            "label": label,
+            "sendEmail": send_email,
+        }
+        result = self._call_post("download-search", data=dumps(payload, default=vars))
+
+        return ApiResponse(**result)
+
+    def download(
+        self,
+        url: str,
+        output_directory: Optional[Path] = Path("."),
+        chunk_size: int = 1024,
+        no_progess: Optional[bool] = False,
+    ) -> None:
         # TODO N° 5
         result = self._call_get(url)
         result.raise_for_status()
 
-        file_name = unquote(result.headers["content-disposition"].split("filename=").pop().strip('"'))
+        file_name = unquote(
+            result.headers["content-disposition"].split("filename=").pop().strip('"')
+        )
         download_size = int(result.headers["content-length"])
 
         if not output_directory.exists():
             output_directory.mkdir()
 
-        with open(output_directory / file_name, "wb") as f, \
-             tqdm(desc=file_name, total=download_size, unit="B",
-             unit_scale=True, unit_divisor=1024, leave=False, disable=no_progess) as bar:
-             for chunk in result.iter_content(chunk_size=chunk_size):
+        with (
+            open(output_directory / file_name, "wb") as f,
+            tqdm(
+                desc=file_name,
+                total=download_size,
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+                leave=False,
+                disable=no_progess,
+            ) as bar,
+        ):
+            for chunk in result.iter_content(chunk_size=chunk_size):
                 bytes_written = f.write(chunk)
                 bar.update(bytes_written)
 
@@ -665,7 +955,12 @@ class Api:
         :return: Dict describing returned geometry
         :rtype: Dict
         """
-        payload = {"gridType": grid_type, "responseShape": response_shape, "path": path, "row": row}
+        payload = {
+            "gridType": grid_type,
+            "responseShape": response_shape,
+            "path": path,
+            "row": row,
+        }
         result = self._call_post("grid2ll", data=dumps(payload, default=vars))
 
         return result["data"]
@@ -716,7 +1011,10 @@ class Api:
         :type user_token: str
         :raises HTTPError:
         """
-        payload: Dict = {"application_token": application_token, "user_token": user_token}
+        payload: Dict = {
+            "application_token": application_token,
+            "user_token": user_token,
+        }
         result = self._call_post("login-app-guest", data=dumps(payload, default=vars))
 
         self.key = result["data"]
@@ -779,27 +1077,89 @@ class Api:
 
     def notifications(self, system_id: str) -> List[Dict]:
         """
-        Gets a notification list. 
+        Gets a notification list.
 
         :param system_id: Used to identify notifications that are associated with a given application
         :type system_id: str
         :return: List of all notifications
         :rtype: List[Dict]
-        """        
-        payload = {
-            "systemId": system_id
-        }
+        """
+        payload = {"systemId": system_id}
         results = self._call_post("notifications", data=dumps(payload, default=vars))
 
         return results["data"]
-    
-    def order_products(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
-    
-    def order_submit(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+
+    def order_products(
+        self,
+        dataset_name: str,
+        entity_ids: Optional[List[str]] = None,
+        list_id: Optional[str] = None,
+    ) -> ApiResponse:
+        """
+        Gets a list of currently selected products - paginated.
+
+        .. note:: "listId" is the id of the customized list which is built by scene-list-add.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param dataset_name: Dataset alias
+        :type dataset_name: str
+        :param entity_ids: List of scenes, defaults to None
+        :type entity_ids: Optional[List[str]], optional
+        :param list_id: Used to identify the list of scenes to use, defaults to None
+        :type list_id: Optional[str], optional
+        :return: Information about selected products (i.e. id, price, entityId, availability, datasetId, productCode and productName)
+        :rtype: ApiResponse
+        """
+        payload = {
+            "datasetName": dataset_name,
+            "entityIds": entity_ids,
+            "list_id": list_id,
+        }
+        result = self._call_post("order-products", data=dumps(payload, default=vars))
+
+        return ApiResponse(**result)
+
+    def order_submit(
+        self,
+        products: List[ProductInput],
+        auto_bulk_order: Optional[bool] = None,
+        processing_parameters: Optional[str] = None,
+        priority: Optional[int] = None,
+        order_comment: Optional[str] = None,
+        system_id: Optional[str] = None,
+    ) -> ApiResponse:
+        """
+        Submits the current product list as a TRAM order - internally calling tram-order-create.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param products: Used to identify higher level products that this data may be used to create
+        :type products: List[Product]
+        :param auto_bulk_order: If any products can be bulk ordered as a result of completed processing this option allows users to have orders automatically submitted, defaults to None
+        :type auto_bulk_order: Optional[bool], optional
+        :param processing_parameters: Optional processing parameters to send to the processing system, defaults to None
+        :type processing_parameters: Optional[str], optional
+        :param priority: Processing Priority, defaults to None
+        :type priority: Optional[int], optional
+        :param order_comment: Optional textual identifier for the order, defaults to None
+        :type order_comment: Optional[str], optional
+        :param system_id: Identifies the system submitting the order, defaults to None
+        :type system_id: Optional[str], optional
+        :return: Information about successfull (orderNumber) and failed orders
+        :rtype: ApiResponse
+        """
+        payload = {
+            "products": products,
+            "autoBulkOrder": auto_bulk_order,
+            "processingParameters": processing_parameters,
+            "priority": priority,
+            "orderComment": order_comment,
+            "systemId": system_id,
+        }
+        result = self._call_post("order-submit", data=dumps(payload, default=vars))
+
+        return ApiResponse(**result)
 
     def permissions(self) -> List[str]:
         """
@@ -808,14 +1168,15 @@ class Api:
 
         :return: List of user permissions
         :rtype: List[str]
-        :raises HTTPError:
         """
         result = self._call_post("permissions")
 
         return result["data"]
 
     def placename(
-        self, feature_type: Optional[Literal["US", "World"]] = None, name: Optional[str] = None
+        self,
+        feature_type: Optional[Literal["US", "World"]] = None,
+        name: Optional[str] = None,
     ) -> Dict:
         """
         Geocoder
@@ -836,10 +1197,47 @@ class Api:
         result = self._call_post("placename", data=dumps(payload, default=vars))
 
         return result["data"]["results"]
-    
-    def rate_limit_summary(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+
+    def rate_limit_summary(self, ip_address: Optional[List[str]] = None) -> ApiResponse:
+        """
+        Returns download rate limits and how many downloads are in each status as well as how close the user is to reaching the rate limits
+
+        Three elements are provided in the response:
+
+            - initialLimits: Includes the initial downloads rate limits
+                - recentDownloadCount: The maximum number of downloads requested in the past 15 minutes
+                - pendingDownloadCount: The maximum number of downloads in pending state before they are available for download
+                - unattemptedDownloadCount: The maximum number of downloads in available status but the user has not downloaded yet
+            - remainingLimits: Includes downloads that are currently remaining and count towards the rate limits. Users should be watching out for any of those numbers approaching 0 which means it is close to hitting the rate limits
+                - limitType: The type of the limits are counted by, the value is either 'user' or 'ip'
+                - username: The user name associated with the request
+                - ipAddress: The IP address associated with the request
+                - recentDownloadCount: The number of downloads requested in the past 15 minutes
+                - pendingDownloadCount: The number of downloads in pending state before they are available for download
+                - unattemptedDownloadCount: The number of downloads in available status but the user has not downloaded yet
+            - recentDownloadCounts: Includes the downloads count in each status for the past 15 minutes
+                - countType: The type of the download counts are calculated by, the value is either 'user' or 'ip'
+                - username: The user name associated with the request
+                - ipAddress: The IP address associated with the request
+                - downloadCount: The number of downloads per status in the past 15 minutes
+
+        .. warning:: Users should be watching out for any of the `remainingLimits` numbers approaching 0 which means it is close to hitting the rate limits.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        .. warning:: This API may be online while the distribution systems are unavailable. When this occurs, you will recieve the following error when requesting products that belong to any of these systems: 'This download has been temporarily disabled. Please try again at a later time. We apologize for the inconvenience.'. Once the distribution system is back online, this error will stop occuring and download requests will succeed.
+
+        :param ip_address: Used to specify multiple IP address, defaults to None
+        :type ip_address: Optional[List[str]], optional
+        :return: Rate Limit stats
+        :rtype: ApiResponse
+        """
+        payload = {"ipAddress": ip_address}
+        result = self._call_post(
+            "rate-limit-summary", data=dumps(payload, default=vars)
+        )
+
+        return ApiResponse(**result)
 
     def scene_list_add(
         self,
@@ -978,7 +1376,9 @@ class Api:
         }
         _ = self._call_post("scene-list-remove", data=dumps(payload, default=vars))
 
-    def scene_list_summary(self, list_id: str, dataset_name: Optional[str] = None) -> Dict:
+    def scene_list_summary(
+        self, list_id: str, dataset_name: Optional[str] = None
+    ) -> Dict:
         """
         Returns summary information for a given list.
 
@@ -994,7 +1394,9 @@ class Api:
             "listId": list_id,
             "datasetName": dataset_name,
         }
-        result = self._call_post("scene-list-summary", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "scene-list-summary", data=dumps(payload, default=vars)
+        )
 
         return result["data"]
 
@@ -1088,7 +1490,9 @@ class Api:
             "includeNullMetadataValues": include_null_metadata,
             "useCustomization": use_customization,
         }
-        result = self._call_post("scene-metadata-list", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "scene-metadata-list", data=dumps(payload, default=vars)
+        )
 
         return result["data"]
 
@@ -1118,7 +1522,9 @@ class Api:
             "entityId": entity_id,
             "metadataType": metadata_type,
         }
-        result = self._call_post("scene-metadata-list", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "scene-metadata-list", data=dumps(payload, default=vars)
+        )
 
         return result["data"]
 
@@ -1306,7 +1712,11 @@ class Api:
             "sortDirection": sort_direction,
             "temporalFilter": temporal_filter,
         }
-        result = self._call_post("scene-search-delete", data=dumps(payload, default=vars), headers=self.headers)
+        result = self._call_post(
+            "scene-search-delete",
+            data=dumps(payload, default=vars),
+            headers=self.headers,
+        )
 
         return result["data"]
 
@@ -1380,37 +1790,172 @@ class Api:
             "orderListName": order_list_name,
             "excludeListName": exlucde_list_name,
         }
-        result = self._call_post("scene-search-secondary", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "scene-search-secondary", data=dumps(payload, default=vars)
+        )
 
         return result["data"]
-    
-    def tram_order_detail_update(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
 
-    def tram_order_details(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+    def tram_order_detail_update(
+        self, order_number: str, detail_key: str, detail_value: str
+    ) -> ApiResponse:
+        """
+        This method is used to set metadata for an order.
 
-    def tram_order_details_clear(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
 
-    def tram_order_details_remove(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+        :param order_number: The order ID for the order to update
+        :type order_number: str
+        :param detail_key: The system detail key
+        :type detail_key: str
+        :param detail_value: The value to store under the detailKey
+        :type detail_value: str
+        :return: Updated key-value pair
+        :rtype: ApiResponse
+        """
+        payload = {
+            "orderNumber": order_number,
+            "detailKey": detail_key,
+            "detailValue": detail_value,
+        }
+        result = self._call_post(
+            "tram-order-detail-update", data=dumps(payload, default=vars)
+        )
 
-    def tram_order_search(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+        return ApiResponse(**result)
 
-    def tram_order_status(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+    def tram_order_details(self, order_number: str) -> ApiResponse:
+        """
+        This method is used to view the metadata within an order.
 
-    def tram_order_units(self):
-        # WARNING: This method is only documented and accessible, when having the MACHINE role assigned to your account.
-        pass
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param order_number: The order ID to get details for
+        :type order_number: str
+        :return: Metadata for order as dictionary
+        :rtype: ApiResponse
+        """
+        payload = {"orderNumber": order_number}
+        result = self._call_post(
+            "tram-order-details", data=dumps(payload, default=vars)
+        )
+
+        return ApiResponse(**result)
+
+    def tram_order_details_clear(self, order_number: str) -> ApiResponse:
+        """
+        This method is used to clear all metadata within an order.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param order_number: The order ID to clear details for
+        :type order_number: str
+        :return: Data section is Null
+        :rtype: ApiResponse
+        """
+        payload = {"orderNumber": order_number}
+        result = self._call_post(
+            "tram-order-details-clear", data=dumps(payload, default=vars)
+        )
+
+        return ApiResponse(**result)
+
+    def tram_order_details_remove(
+        self, order_number: str, detail_key: str
+    ) -> ApiResponse:
+        """
+        This method is used to remove the metadata within an order.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param order_number: The order ID to clear details for
+        :type order_number: str
+        :param detail_key: The system detail key
+        :type detail_key: str
+        :return: Previous value of deleted key
+        :rtype: ApiResponse
+        """
+        payload = {"orderNumber": order_number, "detailKey": detail_key}
+        result = self._call_post(
+            "tram-order-deatils-remove", data=dumps(payload, default=vars)
+        )
+
+        return ApiResponse(**result)
+
+    def tram_order_search(
+        self,
+        order_id: Optional[str] = None,
+        max_results: Optional[int] = 25,
+        system_id: Optional[str] = None,
+        sort_asc: Optional[bool] = None,
+        sort_field: Optional[
+            Literal["order_id", "date_entered", "date_updated"]
+        ] = None,
+        status_filter: Optional[List[str]] = None,
+    ) -> ApiResponse:
+        """
+        Search TRAM orders.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param order_id: The order ID to get status for (accepts '%' wildcard), defaults to None
+        :type order_id: Optional[str], optional
+        :param max_results: How many results should be returned on each page?, defaults to 25
+        :type max_results: Optional[int], optional
+        :param system_id: Limit results based on the application that order was submitted from, defaults to None
+        :type system_id: Optional[str], optional
+        :param sort_asc: True for ascending results, false for descending results, defaults to None
+        :type sort_asc: Optional[bool], optional
+        :param sort_field: Which field should sorting be done on?, defaults to None
+        :type sort_field: Optional[Literal["order_id", "date_entered", "date_updated"]], optional
+        :param status_filter: An array of status codes to..., defaults to None
+        :type status_filter: Optional[List[str]], optional
+        :return: List of order information
+        :rtype: ApiResponse
+        """
+        payload = {
+            "orderId": order_id,
+            "maxResults": max_results,
+            "systemId": system_id,
+            "sortAsc": sort_asc,
+            "sortField": sort_field,
+            "statusFilter": status_filter,
+        }
+        result = self._call_post("tram-order-search", data=dumps(payload, default=vars))
+
+        return ApiResponse(**result)
+
+    def tram_order_status(self, order_number: str) -> ApiResponse:
+        """
+        Gets the status of a TRAM order.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param order_number: The order ID to get status for
+        :type order_number: str
+        :return: Status for requested order
+        :rtype: ApiResponse
+        """
+        payload = {"orderNumber": order_number}
+        result = self._call_post("tram-order-status", data=dumps(payload, default=vars))
+
+        return ApiResponse(**result)
+
+    def tram_order_units(self, order_number: str) -> ApiResponse:
+        """
+        Lists units for a specified order.
+
+        .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
+
+        :param order_number: The order ID to get units for
+        :type order_number: str
+        :return: List of TRAM units
+        :rtype: ApiResponse
+        """
+        payload = {"orderNumber": order_number}
+        result = self._call_post("tram-order-units", data=dumps(payload, default=vars))
+
+        return ApiResponse(**result)
 
     def user_preferences_get(
         self, system_id: Optional[str] = None, setting: Optional[List[str]] = None
@@ -1428,12 +1973,16 @@ class Api:
         :raises HTTPError:
         """
         payload = {"systemId": system_id, "setting": setting}
-        result = self._call_post("user-preferences-get", data=dumps(payload, default=vars))
+        result = self._call_post(
+            "user-preferences-get", data=dumps(payload, default=vars)
+        )
 
         return result["data"]
 
     def user_preferences_set(
-        self, system_id: Optional[str] = None, user_preferences: Optional[List[str]] = None
+        self,
+        system_id: Optional[str] = None,
+        user_preferences: Optional[List[str]] = None,
     ) -> None:
         """
         This method is used to create or update user's preferences.
