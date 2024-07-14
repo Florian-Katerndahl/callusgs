@@ -40,6 +40,7 @@ class Api:
 
     def __init__(
         self,
+        relogin: bool = True,
         method: Optional[str] = "token",
         user: Optional[str] = None,
         auth: Optional[str] = None,
@@ -47,6 +48,7 @@ class Api:
         self.key: Optional[str] = None
         self.login_timestamp: Optional[datetime] = None
         self.headers: Dict[str, str] = None
+        self.relogin = relogin
         self.login_method = method
         self.user = user
         self.auth = auth
@@ -113,9 +115,22 @@ class Api:
             and (datetime.now() - self.login_timestamp).total_seconds()
             >= SECONDS_PER_HOUR * 2
         ):
-            raise AuthenticationEarthExplorerException(
+            if not self.relogin:
+                raise AuthenticationEarthExplorerException(
                 "Two hours have passed since you logged in, api session token expired. Please login again!"
             )
+            
+            match self.login_method:
+                case "token":
+                    self.login_token(self.user, self.auth)
+                case "password":
+                    self.login(self.user, self.auth)
+                case "sso":
+                    self.login_sso(self.user, self.auth)
+                case "app_guest":
+                    self.login_app_guest(self.user, self.auth)
+                case _:
+                    raise AttributeError(f"Unknown login method: {self.login_method}")
 
         with requests.post(
             Api.ENDPOINT + endpoint, headers=self.headers, **kwargs
@@ -989,6 +1004,8 @@ class Api:
 
         result = self._call_post("login", data=dumps(payload, default=vars))
 
+        self.user = username
+        self.auth = password
         self.key = result["data"]
         self.login_timestamp = datetime.now()
         self.headers = {"X-Auth-Token": self.key}
@@ -1017,6 +1034,8 @@ class Api:
         }
         result = self._call_post("login-app-guest", data=dumps(payload, default=vars))
 
+        self.user = application_token
+        self.auth = user_token
         self.key = result["data"]
         self.login_timestamp = datetime.now()
         self.headers = {"X-Auth-Token": self.key}
@@ -1060,6 +1079,8 @@ class Api:
 
         result = self._call_post("login-token", data=dumps(payload, default=vars))
 
+        self.user = username
+        self.auth = token
         self.key = result["data"]
         self.login_timestamp = datetime.now()
         self.headers = {"X-Auth-Token": self.key}
