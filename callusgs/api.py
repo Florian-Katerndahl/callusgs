@@ -61,7 +61,7 @@ class Api:
         self.logger.setLevel(logging.DEBUG)
 
     def __enter__(self) -> "Api":
-        self.logger.info("Entering context manager")
+        self.logger.debug("Entering context manager")
         match self.login_method:
             case "token":
                 self.login_token(self.user, self.auth)
@@ -77,7 +77,7 @@ class Api:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
-        self.logger.info("Exiting context manager")
+        self.logger.debug("Exiting context manager")
         self.logout()
 
     def _call_get(self, url: str, stream: Optional[bool] = True) -> requests.Response:
@@ -128,7 +128,7 @@ class Api:
                     "Two hours have passed since you logged in, api session token expired. Please login again!"
                 )
 
-            api_logger.warning("Maximum API conncetion time reached. Trying to reconnect...")
+            self.logger.warning("Maximum API conncetion time reached. Trying to reconnect...")
             match self.login_method:
                 case "token":
                     self.login_token(self.user, self.auth)
@@ -140,10 +140,10 @@ class Api:
                     self.login_app_guest(self.user, self.auth)
                 case _:
                     raise AttributeError(f"Unknown login method: {self.login_method}")
-            api_logger.warning("Successfully reconnected")
+            self.logger.warning("Successfully reconnected")
 
         with requests.post(Api.ENDPOINT + endpoint, headers=self.headers, timeout=1200, **kwargs) as r:
-            api_logger.info(f"Post request to {Api.ENDPOINT + endpoint}")
+            self.logger.debug(f"Post request to {Api.ENDPOINT + endpoint}")
             if conversion == "text":
                 message_content: ApiResponse = ApiResponse(**loads(r.text))
             elif conversion == "binary":
@@ -171,7 +171,7 @@ class Api:
         """
         payload = {"dataOwner": data_owner}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("data-owner", data=post_payload)
 
@@ -196,7 +196,7 @@ class Api:
 
         payload = {"datasetId": dataset_id, "datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset", data=post_payload)
 
@@ -211,7 +211,7 @@ class Api:
         """
         payload = {"datasetId": dataset_id}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-browse", data=post_payload)
 
@@ -228,7 +228,7 @@ class Api:
         """
         payload = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-bulk-products", data=post_payload)
 
@@ -279,7 +279,7 @@ class Api:
             "datasetFilter": dataset_filter,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-categories", data=post_payload)
 
@@ -306,7 +306,7 @@ class Api:
             "fileGroupIds": file_group_ids,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         result = self._call_post("dataset-clear-customization", data=post_payload)
 
@@ -324,7 +324,7 @@ class Api:
         """
         payload = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-coverage", data=post_payload)
 
@@ -347,7 +347,7 @@ class Api:
         """
         payload = {"datasetName": dataset_name, "sceneFilter": scene_filter}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-download-options", data=post_payload)
 
@@ -364,7 +364,7 @@ class Api:
         """
         payload = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-file-groups", data=post_payload)
 
@@ -379,7 +379,7 @@ class Api:
         """
         payload = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-filters", data=post_payload)
 
@@ -394,7 +394,7 @@ class Api:
         """
         payload = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-get-customization", data=post_payload)
 
@@ -415,7 +415,7 @@ class Api:
         """
         payload = {"datasetNames": dataset_names, "metadataType": metadata_type}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-get-customizations", data=post_payload)
 
@@ -443,7 +443,7 @@ class Api:
             "datasetNames": dataset_names,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-messages", data=post_payload)
 
@@ -458,7 +458,7 @@ class Api:
         """
         payload = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-metadata", data=post_payload)
 
@@ -493,7 +493,7 @@ class Api:
         """
         payload = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-order-products", data=post_payload)
 
@@ -561,7 +561,7 @@ class Api:
             "useCustomization": use_customization,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("dataset-search", data=post_payload)
 
@@ -599,7 +599,7 @@ class Api:
             "fileGroups": file_groups,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         result = self._call_post("dataset-set-customization", data=post_payload)
 
@@ -616,7 +616,7 @@ class Api:
         """
         payload = {"datasetCustomization": dataset_customization}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         result = self._call_post("dataset-set-customizations", data=post_payload)
 
@@ -634,7 +634,7 @@ class Api:
         """
         payload = {"proxiedDownloads": proxied_downloads}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("download-complete-proxied", data=post_payload)
 
@@ -655,7 +655,7 @@ class Api:
         """
         payload = {"eulaCode": eula_code, "eulaCodes": eula_codes}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("download-eula", data=post_payload)
 
@@ -671,7 +671,7 @@ class Api:
         """
         payload = {"downloadApplication": download_application}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("download-labels", data=post_payload)
 
@@ -710,7 +710,7 @@ class Api:
             "includeSecondaryFileGroups": include_secondary_file_groups,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("download-options", data=post_payload)
 
@@ -732,7 +732,7 @@ class Api:
         """
         payload = {"downloadApplication": download_application, "label": label}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("download-order-load", data=post_payload)
 
@@ -752,7 +752,7 @@ class Api:
         """
         payload = {"downloadApplication": download_application, "label": label}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         _ = self._call_post("download-order-remove", data=post_payload)
 
@@ -768,7 +768,7 @@ class Api:
         """
         payload = {"downloadId": download_id}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         result = self._call_post("download-remove", data=post_payload)
 
@@ -845,7 +845,7 @@ class Api:
             "dataGroups": data_groups,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("download-request", data=post_payload)
 
@@ -866,7 +866,7 @@ class Api:
         """
         payload = {"downloadApplication": download_application, "label": label}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("download-retrieve", data=post_payload)
 
@@ -894,7 +894,7 @@ class Api:
             "downloadApplication": download_application,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("download-search", data=post_payload)
 
@@ -921,7 +921,7 @@ class Api:
             "sendEmail": send_email,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("download-search", data=post_payload)
 
@@ -992,7 +992,7 @@ class Api:
             "row": row,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("grid2ll", data=post_payload)
 
@@ -1018,7 +1018,7 @@ class Api:
         if user_context:
             payload += {"userContext": user_context}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         result = self._call_post("login", data=post_payload)
 
@@ -1051,7 +1051,7 @@ class Api:
             "user_token": user_token,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         result = self._call_post("login-app-guest", data=post_payload)
 
@@ -1098,7 +1098,7 @@ class Api:
         """
         payload: Dict = {"username": username, "token": token}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         result = self._call_post("login-token", data=post_payload)
 
@@ -1114,7 +1114,7 @@ class Api:
         :raises HTTPError:
         """
         with requests.post(Api.ENDPOINT + "logout", headers=self.headers) as r:
-            self.debug("Logging out")
+            self.logger.debug("Logging out")
             _ = r.raise_for_status()
         self.key = None
         self.headers = None
@@ -1131,7 +1131,7 @@ class Api:
         """
         payload = {"systemId": system_id}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("notifications", data=post_payload)
 
@@ -1163,7 +1163,7 @@ class Api:
             "list_id": list_id,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("order-products", data=post_payload)
 
@@ -1205,7 +1205,7 @@ class Api:
             "systemId": system_id,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("order-submit", data=post_payload)
 
@@ -1242,7 +1242,7 @@ class Api:
         #  be done
         payload = {"featureType": feature_type, "name": name}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("placename", data=post_payload)
 
@@ -1282,7 +1282,7 @@ class Api:
         """
         payload = {"ipAddress": ip_address}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("rate-limit-summary", data=post_payload)
 
@@ -1337,7 +1337,7 @@ class Api:
             "checkDownloadRestriction": check_download_restriction,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         result = self._call_post("scene-list-add", data=post_payload)
 
@@ -1382,7 +1382,7 @@ class Api:
             "maxResults": max_results,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("scene-list-get", data=post_payload)
 
@@ -1426,7 +1426,7 @@ class Api:
             "entityIds": entity_ids,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         _ = self._call_post("scene-list-remove", data=post_payload)
 
@@ -1447,7 +1447,7 @@ class Api:
             "datasetName": dataset_name,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("scene-list-summary", data=post_payload)
 
@@ -1463,7 +1463,7 @@ class Api:
         # TODO list_filter would likely have to be the result of the MetadataFilter types, no?
         payload = {"listFilter": list_filter}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("scene-list-types", data=post_payload)
 
@@ -1508,7 +1508,7 @@ class Api:
             "useCustomization": use_customization,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("scene-metadata", data=post_payload)
 
@@ -1544,7 +1544,7 @@ class Api:
             "useCustomization": use_customization,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("scene-metadata-list", data=post_payload)
 
@@ -1575,7 +1575,7 @@ class Api:
             "metadataType": metadata_type,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("scene-metadata-list", data=post_payload)
 
@@ -1707,7 +1707,7 @@ class Api:
             "includeNullMetadataValue": include_null_metadata,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("scene-search", data=post_payload)
 
@@ -1765,7 +1765,7 @@ class Api:
             "temporalFilter": temporal_filter,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post(
             "scene-search-delete",
@@ -1844,7 +1844,7 @@ class Api:
             "excludeListName": exlucde_list_name,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("scene-search-secondary", data=post_payload)
 
@@ -1871,7 +1871,7 @@ class Api:
             "detailValue": detail_value,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("tram-order-detail-update", data=post_payload)
 
@@ -1888,7 +1888,7 @@ class Api:
         """
         payload = {"orderNumber": order_number}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("tram-order-details", data=post_payload)
 
@@ -1905,7 +1905,7 @@ class Api:
         """
         payload = {"orderNumber": order_number}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("tram-order-details-clear", data=post_payload)
 
@@ -1924,7 +1924,7 @@ class Api:
         """
         payload = {"orderNumber": order_number, "detailKey": detail_key}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("tram-order-deatils-remove", data=post_payload)
 
@@ -1966,7 +1966,7 @@ class Api:
             "statusFilter": status_filter,
         }
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("tram-order-search", data=post_payload)
 
@@ -1983,7 +1983,7 @@ class Api:
         """
         payload = {"orderNumber": order_number}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("tram-order-status", data=post_payload)
 
@@ -2000,7 +2000,7 @@ class Api:
         """
         payload = {"orderNumber": order_number}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("tram-order-units", data=post_payload)
 
@@ -2021,7 +2021,7 @@ class Api:
         """
         payload = {"systemId": system_id, "setting": setting}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
         return self._call_post("user-preferences-get", data=post_payload)
 
@@ -2068,6 +2068,6 @@ class Api:
         # TODO N° 2
         payload = {"systemId": system_id, "userPreferences": user_preferences}
         post_payload = dumps(payload, default=vars)
-        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        self.logger.debug(f"POST request body: {dumps(post_payload)}")
         
         _ = self._call_post("user-preferences-set", data=post_payload)
