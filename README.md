@@ -23,27 +23,29 @@ pip install callusgs
 
 For more detailed usage instructions and/or examples, please refer to the documentation linked below.
 
-### Command line tool
+### Command Line Tools
 
-```bash
-callusgs search
-```
+#### Download
 
 ```bash
 callusgs download
 ```
 
-```bash
-callusgs landsat
-```
+#### Geocode
 
 ```bash
 callusgs geocode
 ```
 
+#### Grid2ll
+
 ```bash
 callusgs grid2ll
 ```
+
+## Limitations
+
+The USGS reccommends to use multi-threaded file downloads. `callusgs` does only implement sequential, single-threaded downloads.
 
 ## Documentation
 
@@ -69,3 +71,5 @@ url = {https://github.com/Florian-Katerndahl/callusgs}
 ## Acknowledgments
 
 Most of the docstrings were provided by the USGS in their API documentation.
+
+The download application took initial inspiration from [the example script provided by the USGS](https://m2m.cr.usgs.gov/api/docs/example/download_data-py).
