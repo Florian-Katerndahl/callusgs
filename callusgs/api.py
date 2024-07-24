@@ -932,7 +932,6 @@ class Api:
         chunk_size: int = 1024,
         no_progess: Optional[bool] = False,
     ) -> None:
-        # TODO N° 5
         result = self._call_get(url)
         result.raise_for_status()
 
