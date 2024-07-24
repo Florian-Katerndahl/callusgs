@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Optional, Any, Dict, List, Literal, Union
 from datetime import datetime
 from json import loads, dumps
+import logging
+import os
 from urllib.parse import unquote
 import sys
 import warnings
@@ -32,7 +34,10 @@ from callusgs.types import (
 from callusgs.errors import (
     AuthenticationEarthExplorerException,
     GeneralEarthExplorerException,
+    ErrorCodes,
 )
+
+api_logger = logging.getLogger("callusgs.api")
 
 
 class Api:
@@ -52,8 +57,11 @@ class Api:
         self.login_method = method
         self.user = user
         self.auth = auth
+        self.logger = logging.getLogger("callusgs.api.Api")
+        self.logger.setLevel(logging.DEBUG)
 
     def __enter__(self) -> "Api":
+        self.logger.info("Entering context manager")
         match self.login_method:
             case "token":
                 self.login_token(self.user, self.auth)
@@ -69,6 +77,7 @@ class Api:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.logger.info("Exiting context manager")
         self.logout()
 
     def _call_get(self, url: str, stream: Optional[bool] = True) -> requests.Response:
@@ -82,7 +91,7 @@ class Api:
         :return: Response object
         :rtype: requests.Response
         """
-        return requests.get(url, headers=self.headers, stream=stream)
+        return requests.get(url, headers=self.headers, stream=stream, timeout=1200)
 
     def _call_post(
         self,
@@ -112,14 +121,14 @@ class Api:
         SECONDS_PER_HOUR: int = 3600
         if (
             self.login_timestamp is not None
-            and (datetime.now() - self.login_timestamp).total_seconds()
-            >= SECONDS_PER_HOUR * 2
+            and (datetime.now() - self.login_timestamp).total_seconds() >= SECONDS_PER_HOUR * 2
         ):
             if not self.relogin:
                 raise AuthenticationEarthExplorerException(
-                "Two hours have passed since you logged in, api session token expired. Please login again!"
-            )
-            
+                    "Two hours have passed since you logged in, api session token expired. Please login again!"
+                )
+
+            api_logger.warning("Maximum API conncetion time reached. Trying to reconnect...")
             match self.login_method:
                 case "token":
                     self.login_token(self.user, self.auth)
@@ -131,30 +140,27 @@ class Api:
                     self.login_app_guest(self.user, self.auth)
                 case _:
                     raise AttributeError(f"Unknown login method: {self.login_method}")
+            api_logger.warning("Successfully reconnected")
 
-        with requests.post(
-            Api.ENDPOINT + endpoint, headers=self.headers, **kwargs
-        ) as r:
+        with requests.post(Api.ENDPOINT + endpoint, headers=self.headers, timeout=1200, **kwargs) as r:
+            api_logger.info(f"Post request to {Api.ENDPOINT + endpoint}")
             if conversion == "text":
-                message_content: Dict = loads(r.text)
+                message_content: ApiResponse = ApiResponse(**loads(r.text))
             elif conversion == "binary":
-                message_content: Dict = loads(r.content)
+                message_content: ApiResponse = ApiResponse(**loads(r.content))
             else:
                 raise AttributeError(
                     f"conversion paramter must be either 'text' or 'binary'. Got {conversion}."
                 )
 
-            if message_content["errorCode"] is not None:
-                print(
-                    f"{message_content['errorCode']}: {message_content['errorMessage']}",
-                    file=sys.stderr,
-                )
+            if message_content.error_code is not None:
+                message_content.raise_for_status()
 
             _ = r.raise_for_status()
 
         return message_content
 
-    def data_owner(self, data_owner: str) -> Dict:
+    def data_owner(self, data_owner: str) -> ApiResponse:
         """
         This method is used to provide the contact information of the data owner.
 
@@ -164,13 +170,12 @@ class Api:
         :rtype: Dict
         """
         payload = {"dataOwner": data_owner}
-        result = self._call_post("data-owner", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("data-owner", data=post_payload)
 
-    def dataset(
-        self, dataset_id: Optional[str] = None, dataset_name: Optional[str] = None
-    ) -> Dict:
+    def dataset(self, dataset_id: Optional[str] = None, dataset_name: Optional[str] = None) -> ApiResponse:
         """
         This method is used to retrieve the dataset by id or name.
 
@@ -190,11 +195,12 @@ class Api:
             raise AttributeError("Not both dataset_id and dataset_name can be None")
 
         payload = {"datasetId": dataset_id, "datasetName": dataset_name}
-        result = self._call_post("dataset", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset", data=post_payload)
 
-    def dataset_browse(self, dataset_id: str) -> List[Dict]:
+    def dataset_browse(self, dataset_id: str) -> ApiResponse:
         """
         This request is used to return the browse configurations for the specified dataset.
 
@@ -204,11 +210,12 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"datasetId": dataset_id}
-        result = self._call_post("dataset-browse", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-browse", data=post_payload)
 
-    def dataset_bulk_products(self, dataset_name: Optional[str] = None) -> List[Dict]:
+    def dataset_bulk_products(self, dataset_name: Optional[str] = None) -> ApiResponse:
         """
         Lists all available bulk products for a dataset - this does not guarantee scene availability.
 
@@ -220,13 +227,12 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post(
-            "dataset-bulk-products", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-bulk-products", data=post_payload)
 
-    def dataset_catalogs(self) -> Dict:
+    def dataset_catalogs(self) -> ApiResponse:
         """
          This method is used to retrieve the available dataset catalogs.
          The use of dataset catalogs are not required, but are used to group datasets by
@@ -235,9 +241,7 @@ class Api:
         :return: Dictionary with all available data catalogs
         :rtype: Dict
         """
-        result = self._call_post("dataset-catalogs")
-
-        return result["data"]
+        return self._call_post("dataset-catalogs")
 
     def dataset_categories(
         self,
@@ -247,7 +251,7 @@ class Api:
         use_customization: Optional[bool] = None,
         parent_id: Optional[str] = None,
         dataset_filter: Optional[str] = None,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         This method is used to search datasets under the categories.
 
@@ -274,11 +278,10 @@ class Api:
             "parentId": parent_id,
             "datasetFilter": dataset_filter,
         }
-        result = self._call_post(
-            "dataset-categories", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-categories", data=post_payload)
 
     def dataset_clear_customization(
         self,
@@ -302,14 +305,15 @@ class Api:
             "metadataType": metadata_type,
             "fileGroupIds": file_group_ids,
         }
-        result = self._call_post(
-            "dataset-clear-customization", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        if result["data"] != 1:
+        result = self._call_post("dataset-clear-customization", data=post_payload)
+
+        if result.data != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
 
-    def dataset_coverage(self, dataset_name: str) -> Dict:
+    def dataset_coverage(self, dataset_name: str) -> ApiResponse:
         """
         Returns coverage for a given dataset.
 
@@ -319,13 +323,14 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post("dataset-coverage", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-coverage", data=post_payload)
 
     def dataset_download_options(
         self, dataset_name: str, scene_filter: Optional[SceneFilter] = None
-    ) -> List[Dict]:
+    ) -> ApiResponse:
         """
         This request lists all available products for a given dataset.
 
@@ -341,13 +346,12 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"datasetName": dataset_name, "sceneFilter": scene_filter}
-        result = self._call_post(
-            "dataset-download-options", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-download-options", data=post_payload)
 
-    def dataset_file_groups(self, dataset_name: str) -> Dict:
+    def dataset_file_groups(self, dataset_name: str) -> ApiResponse:
         """
         This method is used to list all configured file groups for a dataset.
 
@@ -359,13 +363,12 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post(
-            "dataset-file-groups", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-file-groups", data=post_payload)
 
-    def dataset_filters(self, dataset_name: str) -> Dict:
+    def dataset_filters(self, dataset_name: str) -> ApiResponse:
         """
         This request is used to return the metadata filter fields for the specified dataset. These values can be used as additional criteria when submitting search and hit queries.
 
@@ -375,11 +378,12 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post("dataset-filters", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-filters", data=post_payload)
 
-    def dataset_get_customization(self, dataset_name: str) -> Dict:
+    def dataset_get_customization(self, dataset_name: str) -> ApiResponse:
         """
         This method is used to retrieve metadata customization for a specific dataset.
 
@@ -389,17 +393,16 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post(
-            "dataset-get-customization", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-get-customization", data=post_payload)
 
     def dataset_get_customizations(
         self,
         dataset_names: Optional[List[str]] = None,
         metadata_type: Optional[List[str]] = str,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         This method is used to retrieve metadata customizations for multiple datasets at once.
 
@@ -411,18 +414,17 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetNames": dataset_names, "metadataType": metadata_type}
-        result = self._call_post(
-            "dataset-get-customizations", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-get-customizations", data=post_payload)
 
     def dataset_messages(
         self,
         catalog: Optional[str],
         dataset_name: Optional[str] = None,
         dataset_names: Optional[List[str]] = None,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         Returns any notices regarding the given datasets features.
 
@@ -440,11 +442,12 @@ class Api:
             "datasetName": dataset_name,
             "datasetNames": dataset_names,
         }
-        result = self._call_post("dataset-messages", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-messages", data=post_payload)
 
-    def dataset_metadata(self, dataset_name: str) -> Dict:
+    def dataset_metadata(self, dataset_name: str) -> ApiResponse:
         """
         This method is used to retrieve all metadata fields for a given dataset.
 
@@ -454,11 +457,12 @@ class Api:
         :rtype: Dict
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post("dataset-metadata", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-metadata", data=post_payload)
 
-    def dataset_order_products(self, dataset_name: str) -> List[Dict]:
+    def dataset_order_products(self, dataset_name: str) -> ApiResponse:
         """
         Lists all available order products for a dataset.
 
@@ -488,11 +492,10 @@ class Api:
         # ]
         """
         payload = {"datasetName": dataset_name}
-        result = self._call_post(
-            "dataset-order-products", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-order-products", data=post_payload)
 
     def dataset_search(
         self,
@@ -507,7 +510,7 @@ class Api:
         sort_direction: Optional[Literal["ASC", "DESC"]] = "ASC",
         sort_field: Optional[str] = None,
         use_customization: Optional[bool] = None,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         This method is used to find datasets available for searching. By passing only API Key, all available datasets are returned. Additional parameters such as temporal range and spatial bounding box can be used to find datasets that provide more specific data. The dataset name parameter can be used to limit the results based on matching the supplied value against the public dataset name with assumed wildcards at the beginning and end.
 
@@ -557,9 +560,10 @@ class Api:
             "sortField": sort_field,
             "useCustomization": use_customization,
         }
-        result = self._call_post("dataset-search", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("dataset-search", data=post_payload)
 
     def dataset_set_customization(
         self,
@@ -594,16 +598,15 @@ class Api:
             "searchSort": search_sort,
             "fileGroups": file_groups,
         }
-        result = self._call_post(
-            "dataset-set-customization", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        if result["data"] != 1:
+        result = self._call_post("dataset-set-customization", data=post_payload)
+
+        if result.data != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
 
-    def dataset_set_customizations(
-        self, dataset_customization: DatasetCustomization
-    ) -> None:
+    def dataset_set_customizations(self, dataset_customization: DatasetCustomization) -> None:
         """
         This method is used to create or update customizations for multiple datasets at once.
 
@@ -612,16 +615,15 @@ class Api:
         :raises GeneralEarthExplorerException:
         """
         payload = {"datasetCustomization": dataset_customization}
-        result = self._call_post(
-            "dataset-set-customizations", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        if result["data"] != 1:
+        result = self._call_post("dataset-set-customizations", data=post_payload)
+
+        if result.data != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
 
-    def download_complete_proxied(
-        self, proxied_downloads: List[ProxiedDownload]
-    ) -> Dict:
+    def download_complete_proxied(self, proxied_downloads: List[ProxiedDownload]) -> ApiResponse:
         """
         Updates status to 'C' with total downloaded file size for completed proxied downloads.
 
@@ -631,15 +633,14 @@ class Api:
         :rtype: Dict
         """
         payload = {"proxiedDownloads": proxied_downloads}
-        result = self._call_post(
-            "download-complete-proxied", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("download-complete-proxied", data=post_payload)
 
     def download_eula(
         self, eula_code: Optional[str] = None, eula_codes: Optional[List[str]] = None
-    ) -> List[Dict]:
+    ) -> ApiResponse:
         """
         Gets the contents of a EULA from the eulaCodes.
 
@@ -653,11 +654,12 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"eulaCode": eula_code, "eulaCodes": eula_codes}
-        result = self._call_post("download-eula", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("download-eula", data=post_payload)
 
-    def download_labels(self, download_application: Optional[str] = None) -> List[Dict]:
+    def download_labels(self, download_application: Optional[str] = None) -> ApiResponse:
         # TODO 4
         """
         Gets a list of unique download labels associated with the orders.
@@ -668,9 +670,10 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"downloadApplication": download_application}
-        result = self._call_post("download-labels", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("download-labels", data=post_payload)
 
     def download_options(
         self,
@@ -678,7 +681,7 @@ class Api:
         entity_ids: Optional[Union[str, List[str]]] = None,
         list_id: Optional[str] = None,
         include_secondary_file_groups: Optional[bool] = None,
-    ) -> List[Dict]:
+    ) -> ApiResponse:
         """
         The download options request is used to discover downloadable products for each dataset. If a download is marked as not available, an order must be placed to generate that product.
 
@@ -706,13 +709,14 @@ class Api:
             "listId": list_id,
             "includeSecondaryFileGroups": include_secondary_file_groups,
         }
-        result = self._call_post("download-options", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("download-options", data=post_payload)
 
     def download_order_load(
         self, download_application: Optional[str] = None, label: Optional[str] = None
-    ) -> List[Dict]:
+    ) -> ApiResponse:
         # TODO how do I get the label of an order? There's is download-order in one of the examples, but is this correct?
         """
         This method is used to prepare a download order for processing by moving the scenes into the queue for processing.
@@ -727,11 +731,10 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"downloadApplication": download_application, "label": label}
-        result = self._call_post(
-            "download-order-load", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("download-order-load", data=post_payload)
 
     def download_order_remove(
         self,
@@ -748,7 +751,10 @@ class Api:
         :raises GeneralEarthExplorerException:
         """
         payload = {"downloadApplication": download_application, "label": label}
-        _ = self._call_post("download-order-remove", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+
+        _ = self._call_post("download-order-remove", data=post_payload)
 
     def download_remove(self, download_id: int) -> None:
         """
@@ -761,9 +767,12 @@ class Api:
         :raises GeneralEarthExplorerException:
         """
         payload = {"downloadId": download_id}
-        result = self._call_post("download-remove", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        if result["data"] is not True:
+        result = self._call_post("download-remove", data=post_payload)
+
+        if result.data is not True:
             raise GeneralEarthExplorerException("Removal returned False")
 
     def download_request(
@@ -777,7 +786,7 @@ class Api:
         label: Optional[str] = None,
         system_id: Optional[str] = "M2M",
         data_groups: Optional[List[FilegroupDownload]] = None,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         This method is used to insert the requested downloads into the download queue and returns the available download URLs.
 
@@ -824,7 +833,7 @@ class Api:
         :rtype: Dict
         """
         if download_application != "M2M" or system_id != "M2M":
-            raise ValueError
+            raise ValueError("download_application and system_id must have value 'M2M'")
 
         payload = {
             "configurationCode": configuration_code,
@@ -835,13 +844,14 @@ class Api:
             "systemId": system_id,
             "dataGroups": data_groups,
         }
-        result = self._call_post("download-request", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("download-request", data=post_payload)
 
     def download_retrieve(
         self, download_application: Optional[str] = None, label: Optional[str] = None
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         Returns all available and previously requests but not completed downloads.
 
@@ -855,16 +865,17 @@ class Api:
         :rtype: Dict
         """
         payload = {"downloadApplication": download_application, "label": label}
-        result = self._call_post("download-retrieve", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("download-retrieve", data=post_payload)
 
     def download_search(
         self,
         active_only: Optional[bool] = None,
         label: Optional[str] = None,
         download_application: Optional[str] = None,
-    ) -> List[Dict]:
+    ) -> ApiResponse:
         """
         This method is used to search for downloads within the queue, regardless of status, that match the given label.
 
@@ -882,9 +893,10 @@ class Api:
             "label": label,
             "downloadApplication": download_application,
         }
-        result = self._call_post("download-search", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("download-search", data=post_payload)
 
     def download_summary(
         self, download_application: str, label: str, send_email: Optional[bool]
@@ -908,9 +920,10 @@ class Api:
             "label": label,
             "sendEmail": send_email,
         }
-        result = self._call_post("download-search", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return ApiResponse(**result)
+        return self._call_post("download-search", data=post_payload)
 
     def download(
         self,
@@ -946,8 +959,11 @@ class Api:
             for chunk in result.iter_content(chunk_size=chunk_size):
                 bytes_written = f.write(chunk)
                 bar.update(bytes_written)
-
+        
         result.close()
+
+        if download_size != os.path.getsize(output_directory / file_name):
+            raise RuntimeError("Downloaded file has not the same size on disk as was promised by USGS")
 
     def grid2ll(
         self,
@@ -955,7 +971,7 @@ class Api:
         response_shape: Optional[Literal["polygon", "point"]] = None,
         path: Optional[str] = None,
         row: Optional[str] = None,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         Used to translate between known grids and coordinates.
 
@@ -976,9 +992,10 @@ class Api:
             "path": path,
             "row": row,
         }
-        result = self._call_post("grid2ll", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("grid2ll", data=post_payload)
 
     def login(self, username: str, password: str, user_context: Any = None):
         # TODO show notifications after successfull login? Maybe something for an app, not the api integration
@@ -1001,12 +1018,14 @@ class Api:
         payload: Dict = {"username": username, "password": password}
         if user_context:
             payload += {"userContext": user_context}
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        result = self._call_post("login", data=dumps(payload, default=vars))
+        result = self._call_post("login", data=post_payload)
 
         self.user = username
         self.auth = password
-        self.key = result["data"]
+        self.key = result.data
         self.login_timestamp = datetime.now()
         self.headers = {"X-Auth-Token": self.key}
 
@@ -1032,11 +1051,14 @@ class Api:
             "application_token": application_token,
             "user_token": user_token,
         }
-        result = self._call_post("login-app-guest", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+
+        result = self._call_post("login-app-guest", data=post_payload)
 
         self.user = application_token
         self.auth = user_token
-        self.key = result["data"]
+        self.key = result.data
         self.login_timestamp = datetime.now()
         self.headers = {"X-Auth-Token": self.key}
 
@@ -1076,12 +1098,14 @@ class Api:
         :raises HTTPError:
         """
         payload: Dict = {"username": username, "token": token}
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        result = self._call_post("login-token", data=dumps(payload, default=vars))
+        result = self._call_post("login-token", data=post_payload)
 
         self.user = username
         self.auth = token
-        self.key = result["data"]
+        self.key = result.data
         self.login_timestamp = datetime.now()
         self.headers = {"X-Auth-Token": self.key}
 
@@ -1091,12 +1115,13 @@ class Api:
         :raises HTTPError:
         """
         with requests.post(Api.ENDPOINT + "logout", headers=self.headers) as r:
+            self.debug("Logging out")
             _ = r.raise_for_status()
         self.key = None
         self.headers = None
         self.login_timestamp = None
 
-    def notifications(self, system_id: str) -> List[Dict]:
+    def notifications(self, system_id: str) -> ApiResponse:
         """
         Gets a notification list.
 
@@ -1106,9 +1131,10 @@ class Api:
         :rtype: List[Dict]
         """
         payload = {"systemId": system_id}
-        results = self._call_post("notifications", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return results["data"]
+        return self._call_post("notifications", data=post_payload)
 
     def order_products(
         self,
@@ -1137,9 +1163,10 @@ class Api:
             "entityIds": entity_ids,
             "list_id": list_id,
         }
-        result = self._call_post("order-products", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return ApiResponse(**result)
+        return self._call_post("order-products", data=post_payload)
 
     def order_submit(
         self,
@@ -1178,11 +1205,12 @@ class Api:
             "orderComment": order_comment,
             "systemId": system_id,
         }
-        result = self._call_post("order-submit", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return ApiResponse(**result)
+        return self._call_post("order-submit", data=post_payload)
 
-    def permissions(self) -> List[str]:
+    def permissions(self) -> ApiResponse:
         """
         Returns a list of user permissions for the authenticated user.
         This method does not accept any input.
@@ -1190,19 +1218,18 @@ class Api:
         :return: List of user permissions
         :rtype: List[str]
         """
-        result = self._call_post("permissions")
-
-        return result["data"]
+        return self._call_post("permissions")
 
     def placename(
         self,
         feature_type: Optional[Literal["US", "World"]] = None,
         name: Optional[str] = None,
-    ) -> Dict:
+    ) -> ApiResponse:
+        # TODO return type is wrong
         """
         Geocoder
 
-        :param feature_type: Type or feature - see type hint, defaults to None
+        :param feature_type: Type of feature - see type hint, defaults to None
         :type feature_type: Optional[Literal["US", "World"]], optional
         :param name: Name of the feature, defaults to None
         :type name: Optional[str], optional
@@ -1215,9 +1242,10 @@ class Api:
         # TODO convert result dicts to class instances of class Place; depend on method argument if this should
         #  be done
         payload = {"featureType": feature_type, "name": name}
-        result = self._call_post("placename", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]["results"]
+        return self._call_post("placename", data=post_payload)
 
     def rate_limit_summary(self, ip_address: Optional[List[str]] = None) -> ApiResponse:
         """
@@ -1254,11 +1282,10 @@ class Api:
         :rtype: ApiResponse
         """
         payload = {"ipAddress": ip_address}
-        result = self._call_post(
-            "rate-limit-summary", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return ApiResponse(**result)
+        return self._call_post("rate-limit-summary", data=post_payload)
 
     def scene_list_add(
         self,
@@ -1310,12 +1337,15 @@ class Api:
             "timeToLive": ttl,
             "checkDownloadRestriction": check_download_restriction,
         }
-        result = self._call_post("scene-list-add", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+
+        result = self._call_post("scene-list-add", data=post_payload)
 
         items_to_add: int = 1 if entity_ids is None else len(entity_ids)
-        if result["data"] != items_to_add:
+        if result.data != items_to_add:
             raise RuntimeError(
-                f"Number of scenes added {result['data']} does not equal provided number of scenes {items_to_add}"
+                f"Number of scenes added {result.data} does not equal provided number of scenes {items_to_add}"
             )
 
     def scene_list_get(
@@ -1324,7 +1354,7 @@ class Api:
         dataset_name: Optional[str] = None,
         starting_number: Optional[int] = None,
         max_results: Optional[int] = None,
-    ) -> List[Dict]:
+    ) -> ApiResponse:
         """
         Returns items in the given scene list.
 
@@ -1352,9 +1382,10 @@ class Api:
             "startingNumber": starting_number,
             "maxResults": max_results,
         }
-        result = self._call_post("scene-list-get", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("scene-list-get", data=post_payload)
 
     def scene_list_remove(
         self,
@@ -1362,7 +1393,7 @@ class Api:
         dataset_name: Optional[str] = None,
         entity_id: Optional[str] = None,
         entity_ids: Optional[List[str]] = None,
-    ):
+    ) -> None:
         """
         Removes items from the given list. If no datasetName is provided, the call removes
         the whole list. If a datasetName is provided but no entityId, this call removes that
@@ -1395,11 +1426,12 @@ class Api:
             "entityId": entity_id,
             "entityIds": entity_ids,
         }
-        _ = self._call_post("scene-list-remove", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-    def scene_list_summary(
-        self, list_id: str, dataset_name: Optional[str] = None
-    ) -> Dict:
+        _ = self._call_post("scene-list-remove", data=post_payload)
+
+    def scene_list_summary(self, list_id: str, dataset_name: Optional[str] = None) -> ApiResponse:
         """
         Returns summary information for a given list.
 
@@ -1415,13 +1447,12 @@ class Api:
             "listId": list_id,
             "datasetName": dataset_name,
         }
-        result = self._call_post(
-            "scene-list-summary", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("scene-list-summary", data=post_payload)
 
-    def scene_list_types(self, list_filter: Optional[str]) -> List[Dict]:
+    def scene_list_types(self, list_filter: Optional[str]) -> ApiResponse:
         """
         Returns scene list types (exclude, search, order, bulk, etc).
 
@@ -1432,9 +1463,10 @@ class Api:
         """
         # TODO list_filter would likely have to be the result of the MetadataFilter types, no?
         payload = {"listFilter": list_filter}
-        result = self._call_post("scene-list-types", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("scene-list-types", data=post_payload)
 
     def scene_metadata(
         self,
@@ -1444,7 +1476,7 @@ class Api:
         metadata_type: Optional[str] = None,
         include_null_metadata: Optional[bool] = None,
         use_customization: Optional[bool] = None,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         This request is used to return metadata for a given scene.
 
@@ -1476,9 +1508,10 @@ class Api:
             "includeNullMetadataValues": include_null_metadata,
             "useCustomization": use_customization,
         }
-        result = self._call_post("scene-metadata", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("scene-metadata", data=post_payload)
 
     def scene_metadata_list(
         self,
@@ -1487,7 +1520,7 @@ class Api:
         metadata_type: Optional[str] = None,
         include_null_metadata: Optional[bool] = None,
         use_customization: Optional[bool] = None,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         Scene Metadata where the input is a pre-set list.
 
@@ -1511,15 +1544,14 @@ class Api:
             "includeNullMetadataValues": include_null_metadata,
             "useCustomization": use_customization,
         }
-        result = self._call_post(
-            "scene-metadata-list", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("scene-metadata-list", data=post_payload)
 
     def scene_metadata_xml(
         self, dataset_name: str, entity_id: str, metadata_type: Optional[str] = None
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         Returns metadata formatted in XML, ahering to FGDC, ISO and EE scene metadata
         formatting standards.
@@ -1543,11 +1575,10 @@ class Api:
             "entityId": entity_id,
             "metadataType": metadata_type,
         }
-        result = self._call_post(
-            "scene-metadata-list", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("scene-metadata-list", data=post_payload)
 
     def scene_search(
         self,
@@ -1565,7 +1596,7 @@ class Api:
         order_list_name: Optional[str] = None,
         exclude_list_name: Optional[str] = None,
         include_null_metadata: Optional[bool] = None,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         Searching is done with limited search criteria. All coordinates are assumed decimal-degree
         format. If lowerLeft or upperRight are supplied, then both must exist in the request
@@ -1676,9 +1707,10 @@ class Api:
             "excludeListName": exclude_list_name,
             "includeNullMetadataValue": include_null_metadata,
         }
-        result = self._call_post("scene-search", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("scene-search", data=post_payload)
 
     def scene_search_delete(
         self,
@@ -1688,7 +1720,7 @@ class Api:
         sort_field: Optional[str] = None,
         sort_direction: Optional[Literal["ASC", "DEC"]] = None,
         temporal_filter: Optional[TemporalFilter] = None,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         This method is used to detect deleted scenes from datasets that support it. Supported
         datasets are determined by the 'supportDeletionSearch' parameter in the 'datasets'
@@ -1733,13 +1765,14 @@ class Api:
             "sortDirection": sort_direction,
             "temporalFilter": temporal_filter,
         }
-        result = self._call_post(
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+
+        return self._call_post(
             "scene-search-delete",
-            data=dumps(payload, default=vars),
+            post_payload,
             headers=self.headers,
         )
-
-        return result["data"]
 
     def scene_search_secondary(
         self,
@@ -1754,7 +1787,7 @@ class Api:
         bulk_list_name: Optional[str] = None,
         order_list_name: Optional[str] = None,
         exlucde_list_name: Optional[str] = None,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         This method is used to find the related scenes for a given scene.
 
@@ -1811,11 +1844,10 @@ class Api:
             "orderListName": order_list_name,
             "excludeListName": exlucde_list_name,
         }
-        result = self._call_post(
-            "scene-search-secondary", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("scene-search-secondary", data=post_payload)
 
     def tram_order_detail_update(
         self, order_number: str, detail_key: str, detail_value: str
@@ -1839,11 +1871,10 @@ class Api:
             "detailKey": detail_key,
             "detailValue": detail_value,
         }
-        result = self._call_post(
-            "tram-order-detail-update", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return ApiResponse(**result)
+        return self._call_post("tram-order-detail-update", data=post_payload)
 
     def tram_order_details(self, order_number: str) -> ApiResponse:
         """
@@ -1857,11 +1888,10 @@ class Api:
         :rtype: ApiResponse
         """
         payload = {"orderNumber": order_number}
-        result = self._call_post(
-            "tram-order-details", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return ApiResponse(**result)
+        return self._call_post("tram-order-details", data=post_payload)
 
     def tram_order_details_clear(self, order_number: str) -> ApiResponse:
         """
@@ -1875,15 +1905,12 @@ class Api:
         :rtype: ApiResponse
         """
         payload = {"orderNumber": order_number}
-        result = self._call_post(
-            "tram-order-details-clear", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return ApiResponse(**result)
+        return self._call_post("tram-order-details-clear", data=post_payload)
 
-    def tram_order_details_remove(
-        self, order_number: str, detail_key: str
-    ) -> ApiResponse:
+    def tram_order_details_remove(self, order_number: str, detail_key: str) -> ApiResponse:
         """
         This method is used to remove the metadata within an order.
 
@@ -1897,11 +1924,10 @@ class Api:
         :rtype: ApiResponse
         """
         payload = {"orderNumber": order_number, "detailKey": detail_key}
-        result = self._call_post(
-            "tram-order-deatils-remove", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return ApiResponse(**result)
+        return self._call_post("tram-order-deatils-remove", data=post_payload)
 
     def tram_order_search(
         self,
@@ -1909,9 +1935,7 @@ class Api:
         max_results: Optional[int] = 25,
         system_id: Optional[str] = None,
         sort_asc: Optional[bool] = None,
-        sort_field: Optional[
-            Literal["order_id", "date_entered", "date_updated"]
-        ] = None,
+        sort_field: Optional[Literal["order_id", "date_entered", "date_updated"]] = None,
         status_filter: Optional[List[str]] = None,
     ) -> ApiResponse:
         """
@@ -1942,9 +1966,10 @@ class Api:
             "sortField": sort_field,
             "statusFilter": status_filter,
         }
-        result = self._call_post("tram-order-search", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return ApiResponse(**result)
+        return self._call_post("tram-order-search", data=post_payload)
 
     def tram_order_status(self, order_number: str) -> ApiResponse:
         """
@@ -1958,9 +1983,10 @@ class Api:
         :rtype: ApiResponse
         """
         payload = {"orderNumber": order_number}
-        result = self._call_post("tram-order-status", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return ApiResponse(**result)
+        return self._call_post("tram-order-status", data=post_payload)
 
     def tram_order_units(self, order_number: str) -> ApiResponse:
         """
@@ -1974,13 +2000,14 @@ class Api:
         :rtype: ApiResponse
         """
         payload = {"orderNumber": order_number}
-        result = self._call_post("tram-order-units", data=dumps(payload, default=vars))
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return ApiResponse(**result)
+        return self._call_post("tram-order-units", data=post_payload)
 
     def user_preferences_get(
         self, system_id: Optional[str] = None, setting: Optional[List[str]] = None
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         This method is used to retrieve user's preference settings.
 
@@ -1994,11 +2021,10 @@ class Api:
         :raises HTTPError:
         """
         payload = {"systemId": system_id, "setting": setting}
-        result = self._call_post(
-            "user-preferences-get", data=dumps(payload, default=vars)
-        )
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
 
-        return result["data"]
+        return self._call_post("user-preferences-get", data=post_payload)
 
     def user_preferences_set(
         self,
@@ -2042,6 +2068,7 @@ class Api:
         """
         # TODO N° 2
         payload = {"systemId": system_id, "userPreferences": user_preferences}
-        _ = self._call_post("user-preferences-set", data=dumps(payload, default=vars))
-
-        return
+        post_payload = dumps(payload, default=vars)
+        api_logger.debug(f"POST request body: {dumps(post_payload)}")
+        
+        _ = self._call_post("user-preferences-set", data=post_payload)

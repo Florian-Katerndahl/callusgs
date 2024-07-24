@@ -2,7 +2,6 @@
 Implementation of USGS's machine-to-machine API data types: https://m2m.cr.usgs.gov/api/docs/datatypes/
 """
 
-from datetime import datetime
 from json import dumps
 from typing import List, Any, Union, Optional, Dict
 
@@ -13,13 +12,22 @@ class ApiResponse:
     """
     Custom data type to represent Api response objects.
     """
-    def __init__(self, data: Union[Dict, List[Dict]], version: str, error_code: str, request_id: str, session_id: str, error_message: str) -> None:
+
+    def __init__(
+        self,
+        data: Optional[Union[Dict, List[Dict]]] = None,
+        version: Optional[str] = None,
+        errorCode: Optional[str] = None,
+        requestId: Optional[str] = None,
+        sessionId: Optional[str] = None,
+        errorMessage: Optional[str] = None,
+    ) -> None:
         self.data: Union[Dict, List[Dict]] = data
         self.version: str = version
-        self.error_code: str = error_code
-        self.error_message: str = error_message
-        self.request_id: str = request_id
-        self.session_id: str = session_id
+        self.error_code: str = errorCode
+        self.error_message: str = errorMessage
+        self.request_id: str = requestId
+        self.session_id: str = sessionId
 
     def raise_status(self) -> None:
         raise ErrorCodes()(self.error_code)
@@ -174,18 +182,18 @@ class IngestFilter(EarthExplorerBaseType):
 
 class MetadataFilter(EarthExplorerBaseType):
     """This is an abstract data model, use MetadataAnd, MetadataBetween, MetadataOr, or MetadataValue"""
+
     pass
 
 
 class Metadata(EarthExplorerBaseType):
     """This is an abstract data model, use MetadataAnd, MetadataBetween, MetadataOr, or MetadataValue"""
+
     pass
 
 
 class MetadataAnd(EarthExplorerBaseType):
-    def __init__(
-        self, child_filters: List[Union[MetadataFilter, Metadata]]
-    ) -> None:
+    def __init__(self, child_filters: List[Union[MetadataFilter, Metadata]]) -> None:
         """
         Metadata And data type
 
@@ -199,9 +207,7 @@ class MetadataAnd(EarthExplorerBaseType):
 
 
 class MetadataBetween(EarthExplorerBaseType):
-    def __init__(
-        self, filter_id: str, first_value: int, second_value: int
-    ) -> None:
+    def __init__(self, filter_id: str, first_value: int, second_value: int) -> None:
         """
         Matadata Between data type
 
@@ -221,9 +227,7 @@ class MetadataBetween(EarthExplorerBaseType):
 
 
 class MetadataOr(EarthExplorerBaseType):
-    def __init__(
-        self, child_filters: List[Union[MetadataFilter, Metadata]]
-    ) -> None:
+    def __init__(self, child_filters: List[Union[MetadataFilter, Metadata]]) -> None:
         """
         Metadata Or data type
 
@@ -260,6 +264,7 @@ class MetadataValue(EarthExplorerBaseType):
 
 class SpatialFilter(EarthExplorerBaseType):
     """This is an abstract data model, use SpatialFilterMbr or SpatialFilterGeoJson"""
+
     pass
 
 
@@ -340,6 +345,7 @@ class SceneMetadataConfig(EarthExplorerBaseType):
 
 class SpatialBounds(EarthExplorerBaseType):
     """This is an abstract data model, use spatialBoundsMbr or geoJson"""
+
     pass
 
 
@@ -374,7 +380,7 @@ class SpatialFilterMbr(EarthExplorerBaseType):
         :type lower_left: Coordinate
         :param upper_right: The northeast point of the minimum bounding rectangle
         :type upper_right: Coordinate
-        """        
+        """
         self.filterType: str = "mbr"
         self.lowerLeft = lower_left
         self.upperRight = upper_right
@@ -597,9 +603,7 @@ class Eula(EarthExplorerBaseType):
 
 
 class FilegroupDownload(EarthExplorerBaseType):
-    def __init__(
-        self, dataset_name: str, file_groups: List[str], list_id: str, data_use: str, label: str
-    ) -> None:
+    def __init__(self, dataset_name: str, file_groups: List[str], list_id: str, data_use: str, label: str) -> None:
         """
         Filegroup Download data type
 
@@ -624,9 +628,7 @@ class FilegroupDownload(EarthExplorerBaseType):
 
 
 class FilepathDownload(EarthExplorerBaseType):
-    def __init__(
-        self, dataset_name: str, product_code: str, data_path: str, data_use: str, label: str
-    ) -> None:
+    def __init__(self, dataset_name: str, product_code: str, data_path: str, data_use: str, label: str) -> None:
         """
         Filepath Download
 
@@ -673,9 +675,7 @@ class Options(EarthExplorerBaseType):
 
 
 class ProductDownload(EarthExplorerBaseType):
-    def __init__(
-        self, dataset_name: str, product_ids: List[str], scene_filter: SceneFilter
-    ) -> None:
+    def __init__(self, dataset_name: str, product_ids: List[str], scene_filter: SceneFilter) -> None:
         """
         Product Download data type
 
@@ -1065,9 +1065,7 @@ class SortCustomization(EarthExplorerBaseType):
 
 
 class FieldConfig(EarthExplorerBaseType):
-    def __init__(
-        self, type: str, filters: List[Any], validators: List[Any], display_list_id: str
-    ) -> None:
+    def __init__(self, type: str, filters: List[Any], validators: List[Any], display_list_id: str) -> None:
         """
         Field Config data type
 
@@ -1205,9 +1203,7 @@ class ProductResponse(EarthExplorerBaseType):
 
 
 class ProductInput(EarthExplorerBaseType):
-    def __init__(
-        self, dataset_name: str, entity_id: str, product_id: str, product_code: str
-    ) -> None:
+    def __init__(self, dataset_name: str, entity_id: str, product_id: str, product_code: str) -> None:
         """
         Prodcut Input data type
 

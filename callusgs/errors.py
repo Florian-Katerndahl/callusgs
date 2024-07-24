@@ -80,6 +80,7 @@ class ErrorCodes:
         "RESTORE_ORDER_ERROR":        {"msg": "Unable to restore order units - full details in error message", "cls": OrderEarthExplorerException},
 
         "SUBSCRIPTION_ERROR":         {"msg": "Subscription creation failed", "cls": SubscriptionEarthExplorerException},
+        "INPUT_PARAMETER_REQUIRED":   {"msg": "A parameter is required and was not supplied", "cls": GeneralEarthExplorerException}
     }
 
     def __call__(self, code: str) -> None:
