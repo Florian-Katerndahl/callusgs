@@ -164,4 +164,7 @@ poetry.lock
 *.secret
 
 # DOCS
-build/*.gpkg
+build/
+
+*.gpkg
+test_downloads/
