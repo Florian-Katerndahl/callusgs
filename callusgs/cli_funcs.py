@@ -269,7 +269,6 @@ def download(args: Namespace):
         assert len(ueids) == len(download_dict) and len(download_dict) == len(entities),\
             "How are scenes missing at this point?"
 
-        # with tqdm(desc="Scenes downloaded", unit="", total=len(download_dict)) as bar:
         ## use download method to download files
         for k, v in tqdm(download_dict.items(), desc="Scenes downloaded"):
             try:
@@ -279,7 +278,6 @@ def download(args: Namespace):
                 ee_session.download_remove(k)
             except RuntimeError as e:
                 download_logger.error(f"Failed to download {v['entityId']}: {e}")
-            # bar.update(1)
 
         ## and now delete the label (i.e. remove order from download queue)
         ee_session.download_order_remove(label=download_label)
