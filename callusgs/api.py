@@ -50,7 +50,7 @@ class Api:
     ) -> None:
         self.key: Optional[str] = None
         self.login_timestamp: Optional[datetime] = None
-        self.headers: Dict[str, str] = None
+        self.headers: Dict[str, str] = {"Content-type": "application/json"}
         self.relogin = relogin
         self.login_method = method
         self.user = user
@@ -97,7 +97,7 @@ class Api:
         conversion: Optional[Literal["text", "binary"]] = "text",
         /,
         **kwargs,
-    ) -> Dict:
+    ) -> ApiResponse:
         """
         Abstract method to call API endpoints with POST method
 
@@ -114,7 +114,7 @@ class Api:
         :raises AttributeError: Paramter passed onto 'conversion' must be either 'text' or 'binary'
         :raises HTTPError:
         :return: Complete API response dictionary
-        :rtype: Dict
+        :rtype: ApiResponse
         """
         SECONDS_PER_HOUR: int = 3600
         if (
@@ -167,9 +167,9 @@ class Api:
         :param data_owner: Used to identify the data owner - this value comes from the dataset-search response
         :type data_owner: str
         :return: Dict containing contact information
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {"dataOwner": data_owner}
+        payload: Dict = {"dataOwner": data_owner}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -191,12 +191,12 @@ class Api:
         :type dataset_name: Optional[str], optional
         :raises AttributeError:
         :return: Dict containing dataset information
-        :rtype: Dict
+        :rtype: ApiResponse
         """
         if dataset_id is None and dataset_name is None:
             raise AttributeError("Not both dataset_id and dataset_name can be None")
 
-        payload = {"datasetId": dataset_id, "datasetName": dataset_name}
+        payload: Dict = {"datasetId": dataset_id, "datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -209,9 +209,9 @@ class Api:
         :param dataset_id: Determines which dataset to return browse configurations for
         :type dataset_id: str
         :return: List of Dicts, each containing information about configuration of subdatasets
-        :rtype: List[Dict]
+        :rtype: ApiResponse
         """
-        payload = {"datasetId": dataset_id}
+        payload: Dict = {"datasetId": dataset_id}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -226,9 +226,9 @@ class Api:
         :param dataset_name: Used to identify the which dataset to return results for, defaults to None
         :type dataset_name: Optional[str], optional
         :return: List of dictionaries containing bulk download information
-        :rtype: List[Dict]
+        :rtype: ApiResponse
         """
-        payload = {"datasetName": dataset_name}
+        payload: Dict = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -241,7 +241,7 @@ class Api:
          their use within our web applications.
 
         :return: Dictionary with all available data catalogs
-        :rtype: Dict
+        :rtype: ApiResponse
         """
         return self._call_post("dataset-catalogs")
 
@@ -270,9 +270,9 @@ class Api:
         :param dataset_filter: If provided, filters the datasets - this automatically adds a wildcard before and after the input value, defaults to None
         :type dataset_filter: Optional[str], optional
         :return: Dict containing all datasets within a catalog
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {
+        payload: Dict = {
             "catalog": catalog,
             "includeMessage": include_message,
             "publicOnly": public_only,
@@ -302,7 +302,7 @@ class Api:
         :type file_group_ids: Optional[List[str]], optional
         :raises GeneralEarthExplorerException:
         """
-        payload = {
+        payload: Dict = {
             "datasetName": dataset_name,
             "metadataType": metadata_type,
             "fileGroupIds": file_group_ids,
@@ -322,9 +322,9 @@ class Api:
         :param dataset_name: Determines which dataset to return coverage for
         :type dataset_name: str
         :return: Bounding box and GeoJSON coverage
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {"datasetName": dataset_name}
+        payload: Dict = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -345,9 +345,9 @@ class Api:
         :param scene_filter: Used to filter data within the dataset, defaults to None
         :type scene_filter: Optional[SceneFilter], optional
         :return: List of available products
-        :rtype: List[Dict]
+        :rtype: ApiResponse
         """
-        payload = {"datasetName": dataset_name, "sceneFilter": scene_filter}
+        payload: Dict = {"datasetName": dataset_name, "sceneFilter": scene_filter}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -362,9 +362,9 @@ class Api:
         :param dataset_name: Dataset alias
         :type dataset_name: str
         :return: Primary and secondary file group information
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {"datasetName": dataset_name}
+        payload: Dict = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -377,9 +377,9 @@ class Api:
         :param dataset_name: Determines which dataset to return filters for
         :type dataset_name: str
         :return: Dict with all related dataset fiters
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {"datasetName": dataset_name}
+        payload: Dict = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -392,9 +392,9 @@ class Api:
         :param dataset_name: Used to identify the dataset to search
         :type dataset_name: str
         :return: Dict containing customized metadata representations
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {"datasetName": dataset_name}
+        payload: Dict = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -413,9 +413,9 @@ class Api:
         :param metadata_type: If populated, identifies which metadata to return(export, full, res_sum, shp), defaults to str
         :type metadata_type: Optional[List[str]], optional
         :return: Dict containing customized metadata representations for datasets, identified by their Ids
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {"datasetNames": dataset_names, "metadataType": metadata_type}
+        payload: Dict = {"datasetNames": dataset_names, "metadataType": metadata_type}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -437,9 +437,9 @@ class Api:
         :param dataset_names: Used as a filter with wildcards inserted at the beginning and the end of the supplied value, defaults to None
         :type dataset_names: Optional[List[str]], optional
         :return: Dict containing notices per dataset supplied
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {
+        payload: Dict = {
             "catalog": catalog,
             "datasetName": dataset_name,
             "datasetNames": dataset_names,
@@ -456,9 +456,9 @@ class Api:
         :param dataset_name: The system-friendly dataset name
         :type dataset_name: str
         :return: All metadata for given dataset
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {"datasetName": dataset_name}
+        payload: Dict = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -475,7 +475,7 @@ class Api:
         :param dataset_name: Used to identify the which dataset to return results for
         :type dataset_name: str
         :return: List of all products available for given dataset name
-        :rtype: List[Dict]
+        :rtype: ApiResponse
 
         :Example:
 
@@ -493,7 +493,7 @@ class Api:
         #    ...,
         # ]
         """
-        payload = {"datasetName": dataset_name}
+        payload: Dict = {"datasetName": dataset_name}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -543,13 +543,13 @@ class Api:
         :param use_customization: Optional parameter to indicate whether to use customization, defaults to None
         :type use_customization: Optional[bool], optional
         :return: Get dataset descriptions and attributes
-        :rtype: Dict
+        :rtype: ApiResponse
 
         :Example:
 
         Api().dataset_search("EE", "dataset_name="Collection 2 Level-1")
         """
-        payload = {
+        payload: Dict = {
             "catalog": catalog,
             "categoryId": category_id,
             "datasetName": dataset_name,
@@ -593,7 +593,7 @@ class Api:
         :type file_groups: Optional[FileGroups], optional
         :raises GeneralEarthExplorerException:
         """
-        payload = {
+        payload: Dict = {
             "datasetName": dataset_name,
             "excluded": excluded,
             "metadata": metadata,
@@ -616,7 +616,7 @@ class Api:
         :type dataset_customization: DatasetCustomization
         :raises GeneralEarthExplorerException:
         """
-        payload = {"datasetCustomization": dataset_customization}
+        payload: Dict = {"datasetCustomization": dataset_customization}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -632,9 +632,9 @@ class Api:
         :param proxied_downloads: Used to specify multiple proxied downloads
         :type proxied_downloads: List[ProxiedDownload]
         :return: Dict containing number of failed downloads and number of statuses updated
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {"proxiedDownloads": proxied_downloads}
+        payload: Dict = {"proxiedDownloads": proxied_downloads}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -653,9 +653,9 @@ class Api:
         :param eula_codes: Used to specify multiple eulas, defaults to None
         :type eula_codes: Optional[List[str]], optional
         :return: List of EULAs
-        :rtype: List[Dict]
+        :rtype: ApiResponse
         """
-        payload = {"eulaCode": eula_code, "eulaCodes": eula_codes}
+        payload: Dict = {"eulaCode": eula_code, "eulaCodes": eula_codes}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -669,9 +669,9 @@ class Api:
         :param download_application: Used to denote the application that will perform the download, defaults to None
         :type download_application: Optional[str], optional
         :return: Information about all valid(?) download orders ['label', 'dateEntered', 'downloadSize', 'downloadCount', 'totalComplete']
-        :rtype: List[Dict]
+        :rtype: ApiResponse
         """
-        payload = {"downloadApplication": download_application}
+        payload: Dict = {"downloadApplication": download_application}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -703,9 +703,9 @@ class Api:
         :param include_secondary_file_groups: Optional parameter to return file group IDs with secondary products, defaults to None
         :type include_secondary_file_groups: Optional[bool], optional
         :return: List of all available download options for a given datset
-        :rtype: List[Dict]
+        :rtype: ApiResponse
         """
-        payload = {
+        payload: Dict = {
             "datasetName": dataset_name,
             "entityIds": entity_ids,
             "listId": list_id,
@@ -730,9 +730,9 @@ class Api:
         :param label: Determines which order to load, defaults to None
         :type label: Optional[str], optional
         :return: Metadata for specified orders given by labels
-        :rtype: List[Dict]
+        :rtype: ApiResponse
         """
-        payload = {"downloadApplication": download_application, "label": label}
+        payload: Dict = {"downloadApplication": download_application, "label": label}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -752,7 +752,7 @@ class Api:
         :type label: Optional[str], optional
         :raises GeneralEarthExplorerException:
         """
-        payload = {"downloadApplication": download_application, "label": label}
+        payload: Dict = {"downloadApplication": download_application, "label": label}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -768,7 +768,7 @@ class Api:
         :type download_id: int
         :raises GeneralEarthExplorerException:
         """
-        payload = {"downloadId": download_id}
+        payload: Dict = {"downloadId": download_id}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -832,12 +832,12 @@ class Api:
         :type data_groups: Optional[List[FilegroupDownload]], optional
         :raises ValueError: When download_application or system_id do not equal "M2M.
         :return: Dict of available downloads, downloads in prepration and failed requests
-        :rtype: Dict
+        :rtype: ApiResponse
         """
         if download_application != "M2M" or system_id != "M2M":
             raise ValueError("download_application and system_id must have value 'M2M'")
 
-        payload = {
+        payload: Dict = {
             "configurationCode": configuration_code,
             "downloadApplication": download_application,
             "downloads": downloads,
@@ -864,9 +864,9 @@ class Api:
         :param label: Determines which downloads to return, defaults to None
         :type label: Optional[str], optional
         :return: Dict with EULAs, List of available downloads (['url', 'label', 'entityId', 'eulaCode', 'filesize' 'datasetId', 'displayId', 'downloadId', 'statusCode', 'statusText', 'productCode', 'productName', 'collectionName']), queue size and requested downloads
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {"downloadApplication": download_application, "label": label}
+        payload: Dict = {"downloadApplication": download_application, "label": label}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -888,9 +888,9 @@ class Api:
         :param download_application: Used to filter downloads by the intended downloading application, defaults to None
         :type download_application: Optional[str], optional
         :return: All download orders according to filters (['label', 'entityId', 'eulaCode', 'filesize' 'datasetId', 'displayId', 'downloadId', 'statusCode', 'statusText', 'productCode', 'productName', 'collectionName'])
-        :rtype: List[Dict]
+        :rtype: ApiResponse
         """
-        payload = {
+        payload: Dict = {
             "acitveOnly": active_only,
             "label": label,
             "downloadApplication": download_application,
@@ -917,7 +917,7 @@ class Api:
         :return: Information about downloaded files
         :rtype: ApiResponse
         """
-        payload = {
+        payload: Dict = {
             "downloadApplication": download_application,
             "label": label,
             "sendEmail": send_email,
@@ -987,9 +987,9 @@ class Api:
         :param row: The y coordinate in the grid system, defaults to None
         :type row: Optional[str], optional
         :return: Dict describing returned geometry
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {
+        payload: Dict = {
             "gridType": grid_type,
             "responseShape": response_shape,
             "path": path,
@@ -1030,7 +1030,7 @@ class Api:
         self.auth = password
         self.key = result.data
         self.login_timestamp = datetime.now()
-        self.headers = {"X-Auth-Token": self.key}
+        self.headers.update({"X-Auth-Token": self.key})
 
     def login_app_guest(self, application_token: str, user_token: str):
         """
@@ -1063,7 +1063,7 @@ class Api:
         self.auth = user_token
         self.key = result.data
         self.login_timestamp = datetime.now()
-        self.headers = {"X-Auth-Token": self.key}
+        self.headers.update({"X-Auth-Token": self.key})
 
     def login_sso(self, user_context: UserContext = None):
         """
@@ -1110,7 +1110,7 @@ class Api:
         self.auth = token
         self.key = result.data
         self.login_timestamp = datetime.now()
-        self.headers = {"X-Auth-Token": self.key}
+        self.headers.update({"X-Auth-Token": self.key})
 
     def logout(self) -> None:
         """
@@ -1131,9 +1131,9 @@ class Api:
         :param system_id: Used to identify notifications that are associated with a given application
         :type system_id: str
         :return: List of all notifications
-        :rtype: List[Dict]
+        :rtype: ApiResponse
         """
-        payload = {"systemId": system_id}
+        payload: Dict = {"systemId": system_id}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -1161,7 +1161,7 @@ class Api:
         :return: Information about selected products (i.e. id, price, entityId, availability, datasetId, productCode and productName)
         :rtype: ApiResponse
         """
-        payload = {
+        payload: Dict = {
             "datasetName": dataset_name,
             "entityIds": entity_ids,
             "list_id": list_id,
@@ -1200,7 +1200,7 @@ class Api:
         :return: Information about successfull (orderNumber) and failed orders
         :rtype: ApiResponse
         """
-        payload = {
+        payload: Dict = {
             "products": products,
             "autoBulkOrder": auto_bulk_order,
             "processingParameters": processing_parameters,
@@ -1239,12 +1239,12 @@ class Api:
         :return: Return list of dictionaries for matched places.
             Dictionary keys are: ['id', 'feature_id', 'placename', 'feature_code', 'country_code',
             'latitude', 'longitude', 'feature_name', 'country_name'].
-        :rtype: Dict
+        :rtype: ApiResponse
         :raises HTTPError:
         """
         # TODO convert result dicts to class instances of class Place; depend on method argument if this should
         #  be done
-        payload = {"featureType": feature_type, "name": name}
+        payload: Dict = {"featureType": feature_type, "name": name}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -1284,7 +1284,7 @@ class Api:
         :return: Rate Limit stats
         :rtype: ApiResponse
         """
-        payload = {"ipAddress": ip_address}
+        payload: Dict = {"ipAddress": ip_address}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -1331,7 +1331,7 @@ class Api:
         """
         if entity_id is not None and entity_ids is not None:
             warnings.warn("Both entityId and entityIds given. Ignoring the first one")
-        payload = {
+        payload: Dict = {
             "listId": list_id,
             "datasetName": dataset_name,
             "idField": id_field,
@@ -1372,14 +1372,14 @@ class Api:
         :param max_results: How many results should be returned?, defaults to None
         :type max_results: Optional[int], optional
         :return: List of items in requested scene list. Each entry is a dictionary in the form of {'entityId', 'datasetName'}.
-        :rtype: List[Dict]
+        :rtype: ApiResponse
         :raises HTTPError:
 
         :Example:
 
         Api.scene_list_get(list_id="my_scene_list")
         """
-        payload = {
+        payload: Dict = {
             "listId": list_id,
             "datasetName": dataset_name,
             "startingNumber": starting_number,
@@ -1423,7 +1423,7 @@ class Api:
         """
         if entity_id is not None and entity_ids is not None:
             warnings.warn("Both entityId and entityIds given. Passing both to API.")
-        payload = {
+        payload: Dict = {
             "listId": list_id,
             "datasetName": dataset_name,
             "entityId": entity_id,
@@ -1443,10 +1443,10 @@ class Api:
         :param dataset_name: Dataset alias, defaults to None
         :type dataset_name: Optional[str], optional
         :return: Dictionary containing a summary and datasets ({'summary', 'datasets'}).
-        :rtype: Dict
+        :rtype: ApiResponse
         :raises HTTPError:
         """
-        payload = {
+        payload: Dict = {
             "listId": list_id,
             "datasetName": dataset_name,
         }
@@ -1462,10 +1462,10 @@ class Api:
         :param list_filter: If provided, only returns listIds that have the provided filter value within the ID
         :type list_filter: Optional[str]
         :return: List of scene list, each containing a dictionary describing a scene list.
-        :rtype: List[Dict]
+        :rtype: ApiResponse
         """
         # TODO list_filter would likely have to be the result of the MetadataFilter types, no?
-        payload = {"listFilter": list_filter}
+        payload: Dict = {"listFilter": list_filter}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -1499,11 +1499,11 @@ class Api:
         :param use_customization: Optional parameter to display metadata view as per user customization, defaults to None
         :type use_customization: Optional[bool], optional
         :return: Dict containing scene metadata
-        :rtype: Dict
+        :rtype: ApiResponse
 
         :raises HTTPError:
         """
-        payload = {
+        payload: Dict = {
             "datasetName": dataset_name,
             "entityId": entity_id,
             "idType": id_type,
@@ -1538,9 +1538,9 @@ class Api:
         :param use_customization: Optional parameter to display metadata view as per user customization, defaults to None
         :type use_customization: Optional[bool], optional
         :return: Dict containing metadata for requested list
-        :rtype: Dict
+        :rtype: ApiResponse
         """
-        payload = {
+        payload: Dict = {
             "datasetName": dataset_name,
             "listId": list_id,
             "metadataType": metadata_type,
@@ -1569,11 +1569,11 @@ class Api:
         :param metadata_type: Used to identify the scene to return results for, defaults to None
         :type metadata_type: Optional[str], optional
         :return: Returns dictionary with metadata for requested scene. The XML content is available with the key 'exportContent'
-        :rtype: Dict
+        :rtype: ApiResponse
 
         :raises HTTPError:
         """
-        payload = {
+        payload: Dict = {
             "datasetName": dataset_name,
             "entityId": entity_id,
             "metadataType": metadata_type,
@@ -1668,7 +1668,7 @@ class Api:
         :type include_null_metadata: Optional[bool], optional
         :raises HTTPError:
         :return: Dictionary containing search results as List[Dict] together with some additional search meatadata (['recordsReturned', 'totalHits', 'totalHitsAccuracy', 'isCustomized', 'numExcluded', 'startingNumber', 'nextRecord'])
-        :rtype: Dict
+        :rtype: ApiResponse
 
         :Example:
 
@@ -1694,7 +1694,7 @@ class Api:
         # Sort search results using useCustomization flag and sortCustomization
         """
         # TODO add missing examples
-        payload = {
+        payload: Dict = {
             "datasetName": dataset_name,
             "maxResults": max_results,
             "startingNumber": starting_number,
@@ -1756,11 +1756,11 @@ class Api:
         :param temporal_filter: Used to filter data based on data acquisition, defaults to None
         :type temporal_filter: Optional[TemporalFilter], optional
         :return: Dictionary containing search results as List[Dict] together with some additional search meatadata
-        :rtype: Dict
+        :rtype: ApiResponse
 
         :raises HTTPError:
         """
-        payload = {
+        payload: Dict = {
             "datasetName": dataset_name,
             "maxResults": max_results,
             "startingNumber": starting_number,
@@ -1829,12 +1829,12 @@ class Api:
         :param exlucde_list_name: If provided, defined a scene-list listId to use to exclude scenes from the results, defaults to None
         :type exlucde_list_name: Optional[str], optional
         :return: Dictionary containing search results for related scenes as List[Dict] together with some additional search meatadata
-        :rtype: Dict
+        :rtype: ApiResponse
 
         :raise HTTPError:
         """
         # TODO continue with examples
-        payload = {
+        payload: Dict = {
             "entityId": entity_id,
             "datasetName": dataset_name,
             "maxResults": max_results,
@@ -1869,7 +1869,7 @@ class Api:
         :return: Updated key-value pair
         :rtype: ApiResponse
         """
-        payload = {
+        payload: Dict = {
             "orderNumber": order_number,
             "detailKey": detail_key,
             "detailValue": detail_value,
@@ -1890,7 +1890,7 @@ class Api:
         :return: Metadata for order as dictionary
         :rtype: ApiResponse
         """
-        payload = {"orderNumber": order_number}
+        payload: Dict = {"orderNumber": order_number}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -1907,7 +1907,7 @@ class Api:
         :return: Data section is Null
         :rtype: ApiResponse
         """
-        payload = {"orderNumber": order_number}
+        payload: Dict = {"orderNumber": order_number}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -1926,7 +1926,7 @@ class Api:
         :return: Previous value of deleted key
         :rtype: ApiResponse
         """
-        payload = {"orderNumber": order_number, "detailKey": detail_key}
+        payload: Dict = {"orderNumber": order_number, "detailKey": detail_key}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -1961,7 +1961,7 @@ class Api:
         :return: List of order information
         :rtype: ApiResponse
         """
-        payload = {
+        payload: Dict = {
             "orderId": order_id,
             "maxResults": max_results,
             "systemId": system_id,
@@ -1985,7 +1985,7 @@ class Api:
         :return: Status for requested order
         :rtype: ApiResponse
         """
-        payload = {"orderNumber": order_number}
+        payload: Dict = {"orderNumber": order_number}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -2002,7 +2002,7 @@ class Api:
         :return: List of TRAM units
         :rtype: ApiResponse
         """
-        payload = {"orderNumber": order_number}
+        payload: Dict = {"orderNumber": order_number}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -2019,11 +2019,11 @@ class Api:
         :param setting: If populated, identifies which setting(s) to return, defaults to None
         :type setting: Optional[List[str]], optional
         :return: Dict containing, possibly subset, preferences of calling user
-        :rtype: Dict
+        :rtype: ApiResponse
 
         :raises HTTPError:
         """
-        payload = {"systemId": system_id, "setting": setting}
+        payload: Dict = {"systemId": system_id, "setting": setting}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
@@ -2070,7 +2070,7 @@ class Api:
         Api.user_preferences_set("EE", preferences)
         """
         # TODO N° 2
-        payload = {"systemId": system_id, "userPreferences": user_preferences}
+        payload: Dict = {"systemId": system_id, "userPreferences": user_preferences}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
 
