@@ -53,7 +53,8 @@ See the docs folder for raw documentation or visit [callusgs.readthedocs.io](htt
 
 ## License
 
-`callusgs` is licensed under the [GPL-v2](LICENSE).
+- `callusgs` is licensed under the [GPL-v2](LICENSE)
+- the file `docs/requirements.txt` is licensed under the MIT license.
 
 ## Citation
 
@@ -70,6 +71,6 @@ url = {https://github.com/Florian-Katerndahl/callusgs}
 
 ## Acknowledgments
 
-Most of the docstrings were provided by the USGS in their API documentation.
-
-The download application took initial inspiration from [the example script provided by the USGS](https://m2m.cr.usgs.gov/api/docs/example/download_data-py).
+- Most of the docstrings were provided by the USGS in their API documentation.  
+- The download application took initial inspiration from [the example script provided by the USGS](https://m2m.cr.usgs.gov/api/docs/example/download_data-py).
+- `docs/requirements.txt` is taken from [here](https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html)
