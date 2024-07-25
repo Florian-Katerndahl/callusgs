@@ -154,9 +154,9 @@ class Api:
                 )
 
             if message_content.error_code is not None:
-                message_content.raise_for_status()
-
-            _ = r.raise_for_status()
+                message_content.raise_status()
+            else:
+                _ = r.raise_for_status()
 
         return message_content
 
@@ -423,7 +423,7 @@ class Api:
 
     def dataset_messages(
         self,
-        catalog: Optional[str],
+        catalog: str,
         dataset_name: Optional[str] = None,
         dataset_names: Optional[List[str]] = None,
     ) -> ApiResponse:
@@ -431,7 +431,7 @@ class Api:
         Returns any notices regarding the given datasets features.
 
         :param catalog: Used to identify datasets that are associated with a given application
-        :type catalog: Optional[str]
+        :type catalog: str
         :param dataset_name: Used as a filter with wildcards inserted at the beginning and the end of the supplied value, defaults to None
         :type dataset_name: Optional[str], optional
         :param dataset_names: Used as a filter with wildcards inserted at the beginning and the end of the supplied value, defaults to None
