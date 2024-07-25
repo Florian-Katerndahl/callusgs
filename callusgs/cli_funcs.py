@@ -4,8 +4,9 @@ from time import sleep, time_ns
 import logging
 from itertools import islice
 import json
+from functools import partial
 
-from tqdm import tqdm
+from tqdm.contrib.concurrent import thread_map
 
 from callusgs import Api
 from callusgs import Types
@@ -14,6 +15,7 @@ from callusgs.utils import (
     month_names_to_index,
     report_usgs_messages,
     downloadable_and_preparing_scenes,
+    singular_download,
 )
 
 api_logger = logging.getLogger("callusgs")
@@ -270,18 +272,11 @@ def download(args: Namespace):
             "How are scenes missing at this point?"
 
         ## use download method to download files
-        for k, v in tqdm(download_dict.items(), desc="Scenes downloaded"):
-            try:
-                # TODO docs ask that I use multithreading here...
-                ee_session.download(v["url"], args.outdir)
-                ## use download-remove with downloadId after successfull download to remove it from download queue
-                ee_session.download_remove(k)
-            except RuntimeError as e:
-                download_logger.error(f"Failed to download {v['entityId']}: {e}")
+        _ = thread_map(partial(singular_download, conection=ee_session, outdir=args.outdir), download_dict, max_workers=5, desc="Total scenes downloaded")
 
         ## and now delete the label (i.e. remove order from download queue)
         ee_session.download_order_remove(label=download_label)
-        download_logger.debug(f"Removed order {download_label}")
+        download_logger.info(f"Removed order {download_label}")
 
 
 def geocode(args: Namespace):

@@ -43,10 +43,6 @@ callusgs geocode
 callusgs grid2ll
 ```
 
-## Limitations
-
-The USGS reccommends to use multi-threaded file downloads. `callusgs` does only implement sequential, single-threaded downloads.
-
 ## Documentation
 
 See the docs folder for raw documentation or visit [callusgs.readthedocs.io](https://callusgs.readthedocs.io).

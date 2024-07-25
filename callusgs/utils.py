@@ -1,9 +1,9 @@
-from typing import Union, Tuple, List, Optional, Literal
+from typing import Union, Tuple, List, Optional, Literal, Dict
 import logging
 from pathlib import Path
 import fiona
 
-# TODO should be renamed to callusgs.Types
+from callusgs import Api
 from callusgs.types import GeoJson, Coordinate
 
 utils_logger = logging.getLogger("callusgs.utils")
@@ -95,8 +95,10 @@ def report_usgs_messages(messages) -> None:
         return
 
     for message in messages:
+        if not isinstance(message, dict):
+            continue
         report_logger.warning(
-            f"USGS at {message['dateUpdated']} with severity '{message['severityText']}': {message['messageContent']}"
+            f"USGS at {message['dateUpdated']} with severity '{message['severityText']}': {message['messageContent'].rstrip()}"
         )
 
 
@@ -130,3 +132,16 @@ def downloadable_and_preparing_scenes(data, available_entities=None):
             raise RuntimeError("Don't know how you got here")
 
     return ueids, download_dict, preparing_ueids
+
+
+# TODO now this function would also need to call the rate_limit endpoint and check for limits.
+# If they exist, log that a timeout or whatever is needed and then sleep for some time
+def singular_download(connection: Api, download_item: Dict, outdir: Path) -> None:
+    k = download_item.keys()
+    v = download_item.values()
+    try:
+        connection.download(v["url"], outdir)
+        ## use download-remove with downloadId after successfull download to remove it from download queue
+        connection.download_remove(k)
+    except RuntimeError as e:
+        utils_logger.error(f"Failed to download {v['entityId']}: {e}")
