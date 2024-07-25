@@ -1,11 +1,5 @@
 GENERAL:
-- [ ] type hint payload dictionaries as dicts?
-- [ ] in CLI applications, check permissions for ["order", "download"] immediately after logging in; if they're not present, remind user they have to request access under "Request access to the M2M API from your ERS profile: https://ers.cr.usgs.gov/profile/access"
-- [ ] set content type to "application/json" in _call_post method or maybe even in __init__ and then update this dictionary on login/logout?! Might actually make more sense tbh
-- [ ] set timeout to recommended value..
-- [ ] implement missing/undocumented API endpoints: download-options, order-products, download-request
-- [ ] respect API limits (see 1)
-- [ ] Update docstrings, ApiResponse is returned now....
+- [ ] respect API limits (see 1); this does not quite work out with retries etc. given the current implementation
 
 1. handle rate limits (HTTP 429) gracefully
 2. create a custom type for the preferences? Probably not, dict is fine in this context
