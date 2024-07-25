@@ -136,9 +136,8 @@ def downloadable_and_preparing_scenes(data, available_entities=None):
 
 # TODO now this function would also need to call the rate_limit endpoint and check for limits.
 # If they exist, log that a timeout or whatever is needed and then sleep for some time
-def singular_download(connection: Api, download_item: Dict, outdir: Path) -> None:
-    k = download_item.keys()
-    v = download_item.values()
+def singular_download(download_item: Dict, connection: Api, outdir: Path) -> None:
+    k, v = download_item
     try:
         connection.download(v["url"], outdir)
         ## use download-remove with downloadId after successfull download to remove it from download queue

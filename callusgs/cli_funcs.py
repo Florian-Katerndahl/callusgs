@@ -272,7 +272,7 @@ def download(args: Namespace):
             "How are scenes missing at this point?"
 
         ## use download method to download files
-        _ = thread_map(partial(singular_download, conection=ee_session, outdir=args.outdir), download_dict, max_workers=5, desc="Total scenes downloaded")
+        _ = thread_map(partial(singular_download, connection=ee_session, outdir=args.outdir), download_dict.items(), max_workers=5, desc="Total scenes downloaded")
 
         ## and now delete the label (i.e. remove order from download queue)
         ee_session.download_order_remove(label=download_label)
