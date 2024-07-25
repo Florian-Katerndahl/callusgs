@@ -603,7 +603,9 @@ class Eula(EarthExplorerBaseType):
 
 
 class FilegroupDownload(EarthExplorerBaseType):
-    def __init__(self, dataset_name: str, file_groups: List[str], list_id: str, data_use: str, label: str) -> None:
+    def __init__(
+        self, dataset_name: str, file_groups: List[str], list_id: str, data_use: str, label: str
+    ) -> None:
         """
         Filegroup Download data type
 
@@ -628,7 +630,9 @@ class FilegroupDownload(EarthExplorerBaseType):
 
 
 class FilepathDownload(EarthExplorerBaseType):
-    def __init__(self, dataset_name: str, product_code: str, data_path: str, data_use: str, label: str) -> None:
+    def __init__(
+        self, dataset_name: str, product_code: str, data_path: str, data_use: str, label: str
+    ) -> None:
         """
         Filepath Download
 
@@ -675,7 +679,9 @@ class Options(EarthExplorerBaseType):
 
 
 class ProductDownload(EarthExplorerBaseType):
-    def __init__(self, dataset_name: str, product_ids: List[str], scene_filter: SceneFilter) -> None:
+    def __init__(
+        self, dataset_name: str, product_ids: List[str], scene_filter: SceneFilter
+    ) -> None:
         """
         Product Download data type
 
@@ -1065,7 +1071,9 @@ class SortCustomization(EarthExplorerBaseType):
 
 
 class FieldConfig(EarthExplorerBaseType):
-    def __init__(self, type: str, filters: List[Any], validators: List[Any], display_list_id: str) -> None:
+    def __init__(
+        self, type: str, filters: List[Any], validators: List[Any], display_list_id: str
+    ) -> None:
         """
         Field Config data type
 
@@ -1203,7 +1211,9 @@ class ProductResponse(EarthExplorerBaseType):
 
 
 class ProductInput(EarthExplorerBaseType):
-    def __init__(self, dataset_name: str, entity_id: str, product_id: str, product_code: str) -> None:
+    def __init__(
+        self, dataset_name: str, entity_id: str, product_id: str, product_code: str
+    ) -> None:
         """
         Prodcut Input data type
 

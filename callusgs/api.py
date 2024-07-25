@@ -9,7 +9,6 @@ from json import loads, dumps
 import logging
 import os
 from urllib.parse import unquote
-import sys
 import warnings
 import requests
 from tqdm import tqdm
@@ -34,7 +33,6 @@ from callusgs.types import (
 from callusgs.errors import (
     AuthenticationEarthExplorerException,
     GeneralEarthExplorerException,
-    ErrorCodes,
 )
 
 api_logger = logging.getLogger("callusgs.api")
@@ -142,7 +140,9 @@ class Api:
                     raise AttributeError(f"Unknown login method: {self.login_method}")
             self.logger.warning("Successfully reconnected")
 
-        with requests.post(Api.ENDPOINT + endpoint, headers=self.headers, timeout=1200, **kwargs) as r:
+        with requests.post(
+            Api.ENDPOINT + endpoint, headers=self.headers, timeout=1200, **kwargs
+        ) as r:
             self.logger.debug(f"Post request to {Api.ENDPOINT + endpoint}")
             if conversion == "text":
                 message_content: ApiResponse = ApiResponse(**loads(r.text))
@@ -175,7 +175,9 @@ class Api:
 
         return self._call_post("data-owner", data=post_payload)
 
-    def dataset(self, dataset_id: Optional[str] = None, dataset_name: Optional[str] = None) -> ApiResponse:
+    def dataset(
+        self, dataset_id: Optional[str] = None, dataset_name: Optional[str] = None
+    ) -> ApiResponse:
         """
         This method is used to retrieve the dataset by id or name.
 
@@ -958,11 +960,13 @@ class Api:
             for chunk in result.iter_content(chunk_size=chunk_size):
                 bytes_written = f.write(chunk)
                 bar.update(bytes_written)
-        
+
         result.close()
 
         if download_size != os.path.getsize(output_directory / file_name):
-            raise RuntimeError("Downloaded file has not the same size on disk as was promised by USGS")
+            raise RuntimeError(
+                "Downloaded file has not the same size on disk as was promised by USGS"
+            )
 
     def grid2ll(
         self,
@@ -2069,5 +2073,5 @@ class Api:
         payload = {"systemId": system_id, "userPreferences": user_preferences}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
-        
+
         _ = self._call_post("user-preferences-set", data=post_payload)
