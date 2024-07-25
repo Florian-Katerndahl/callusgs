@@ -195,7 +195,7 @@ def download(args: Namespace):
             args.product, entities, include_secondary_file_groups=False
         )
         download_logger.info(
-            f"Request {scene_search_results.request_id} in session {scene_search_results.session_id}: Requested download options"
+            f"Request {entity_download_options.request_id} in session {entity_download_options.session_id}: Requested download options"
         )
 
         available_downloads = []
@@ -223,11 +223,11 @@ def download(args: Namespace):
 
         # TODO change test to order
         ## use download-request to request products and set a label
-        _ = ee_session.download_request(
+        requested_downloads = ee_session.download_request(
             "test", downloads=downloads_to_request, label=download_label
         )
         download_logger.info(
-            f"Request {scene_search_results.request_id} in session {scene_search_results.session_id}: Requested downloads for available scenes"
+            f"Request {requested_downloads.request_id} in session {requested_downloads.session_id}: Requested downloads for available scenes"
         )
 
         ## use download-retrieve to retrieve products, regardless of their status (can be checked to if looping over requested downloads is needed)
@@ -236,7 +236,7 @@ def download(args: Namespace):
         download_dict = {}
         retrieved_downloads = ee_session.download_retrieve(label=download_label)
         download_logger.info(
-            f"Request {scene_search_results.request_id} in session {scene_search_results.session_id}: Retrieved download queue"
+            f"Request {retrieved_downloads.request_id} in session {retrieved_downloads.session_id}: Retrieved download queue"
         )
         ueids, download_dict, preparing_ueids = downloadable_and_preparing_scenes(
             [i for i in retrieved_downloads.data["available"] + retrieved_downloads.data["requested"] if "Product Bundle" in i["productName"]]
@@ -255,7 +255,7 @@ def download(args: Namespace):
             sleep(30)
             retrieved_downloads = ee_session.download_retrieve(label=download_label)
             download_logger.info(
-                f"Request {scene_search_results.request_id} in session {scene_search_results.session_id}: Retrieved download queue"
+                f"Request {retrieved_downloads.request_id} in session {retrieved_downloads.session_id}: Retrieved download queue"
             )
             ueids, new_download_dict, new_preparing_ueids = (
                 downloadable_and_preparing_scenes(
