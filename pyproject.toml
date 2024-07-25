@@ -5,7 +5,20 @@ description = "Implementation of USGS's machine-to-machine API (v1.5.0)"
 authors = ["Florian-Katerndahl <florian@katerndahl.com>"]
 license = "GPL-2.0-only"
 readme = "README.md"
-keywords = ["USGS", "API", "machine-to-machine", "Landsat", "CLI", "geodata", "GIS", "EROS", "download", "EarthExplorer"]
+repository = "https://github.com/Florian-Katerndahl/callusgs"
+documentation = "https://callusgs.readthedocs.io/"
+keywords = [
+	"USGS",
+	"API",
+	"machine-to-machine",
+	"Landsat",
+	"CLI",
+	"geodata",
+	"GIS",
+	"EROS",
+	"download",
+	"EarthExplorer"
+]
 classifiers = [
 	"Environment :: Console",
 	#"Framework :: Pytest",
@@ -39,6 +52,9 @@ sphinx-rtd-theme = "^2.0.0"
 
 [tool.poetry.scripts]
 callusgs = "callusgs.cli:main"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/Florian-Katerndahl/callusgs/issues"
 
 [build-system]
 requires = ["poetry-core"]
