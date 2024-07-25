@@ -1,9 +1,12 @@
 from typing import Union, Tuple, List, Optional, Literal
+import logging
 from pathlib import Path
 import fiona
 
 # TODO should be renamed to callusgs.Types
 from callusgs.types import GeoJson, Coordinate
+
+utils_logger = logging.getLogger("callusgs.utils")
 
 
 def ogr2internal(
@@ -56,9 +59,74 @@ def ogr2internal(
 
         if isinstance(coordinates, tuple):
             return GeoJson(geometry_type, list(coordinates))
-        
+
         out_coords: List[List[float]] = []
         for ring in coordinates:
             for coordinate in ring:
                 out_coords.append(list(coordinate))
         return GeoJson(geometry_type, out_coords)
+
+
+def month_names_to_index(month_list: List[str]) -> List[int]:
+    mapping = {
+        "jan": 1,
+        "feb": 2,
+        "mar": 3,
+        "apr": 4,
+        "may": 5,
+        "jun": 6,
+        "jul": 7,
+        "aug": 8,
+        "sep": 9,
+        "oct": 10,
+        "nov": 11,
+        "dec": 12,
+    }
+    out_list = []
+    for month in month_list:
+        if month != "all":
+            out_list.append(mapping[month])
+    return out_list
+
+
+def report_usgs_messages(messages) -> None:
+    report_logger = logging.getLogger("callusgs.utils.reporter")
+    if not messages:
+        return
+
+    for message in messages:
+        report_logger.warning(
+            f"USGS at {message['dateUpdated']} with severity '{message['severityText']}': {message['messageContent']}"
+        )
+
+
+def downloadable_and_preparing_scenes(data, available_entities=None):
+    """
+    _summary_
+
+    :param data: _description_
+    :type data: _type_
+    :param available_entities: _description_, defaults to None
+    :type available_entities: _type_, optional
+    :return: _description_
+    :rtype: _type_
+    """
+    ueids = available_entities or set()
+    preparing_ueids = set()
+    download_dict = {}
+    for i in data:
+        if (eid := i["entityId"]) in ueids:
+            continue
+        if eid not in ueids and i["statusText"] in ["Proxied", "Available"]:
+            ueids.add(eid)
+            download_dict[i["downloadId"]] = {
+                "displayId": i["displayId"],
+                "entityId": eid,
+                "url": i["url"],
+            }
+        elif i["statusText"] in ["Preparing", "Queued", "Staging"]:
+            preparing_ueids.add(eid)
+        else:
+            raise RuntimeError("Don't know how you got here")
+
+    return ueids, download_dict, preparing_ueids
