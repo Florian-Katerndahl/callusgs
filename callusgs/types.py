@@ -112,24 +112,26 @@ class TemplateConfiguration(EarthExplorerBaseType):
 
 
 class GeoJson(EarthExplorerBaseType):
-    def __init__(self, type: str, coordinates: Union[List[float], List[List[float]]]) -> None:
-        # TODO check if warning is correct, Landsatxplore had a similar approach to mine and this seems to work
-        #  for Mbr filter, using coordinates did indeed work...
+    def __init__(self, type: str, coordinates: Union[List[float], List[List[List[float]]]]) -> None:
         """
         GeoJson data type
 
         .. note:: General data type
 
+        .. note:: A polygon is a list of linestrings.
+
         .. warning:: In contrast to the documentation, coordinates must be an array
             of floats (coordinate pairs) and not instances of Coordinate object!
+        
+        .. warning:: GeoJson expects coordinate pairs to be longitude, latidue!
 
         :param type: Geometry types supported by GeoJson, like polygon
         :type type: str
         :param coordinates: Coordinate array
-        :type coordinates: Union[List[float], List[List[float]]]
+        :type coordinates: Union[List[float], List[List[List[float]]]]
         """
         self.type: str = type
-        self.coordinates: Union[List[float], List[List[float]]] = coordinates
+        self.coordinates: Union[List[float], List[List[List[float]]]] = coordinates
 
 
 class IngestUpdateTemplate(EarthExplorerBaseType):
