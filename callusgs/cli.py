@@ -16,7 +16,7 @@ def main() -> int:
     :return: status code
     :rtype: int
     """
-    parent_parser = ArgumentParser(prog="callusgs", formatter_class=ArgumentDefaultsHelpFormatter)
+    parent_parser = ArgumentParser(prog="callusgs", formatter_class=ArgumentDefaultsHelpFormatter, epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>")
     parent_parser.add_argument(
         "--auth-method",
         type=str,
@@ -58,7 +58,7 @@ def main() -> int:
 
     subparsers = parent_parser.add_subparsers(required=True)
 
-    report_parser = subparsers.add_parser("report", help="Report help")
+    report_parser = subparsers.add_parser("report", help="Report help", epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>")
     report_parser.set_defaults(func=exit)
 
     download_parser = subparsers.add_parser(
@@ -66,6 +66,7 @@ def main() -> int:
         help="Download help",
         description="",
         formatter_class=ArgumentDefaultsHelpFormatter,
+        epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>",
     )
     download_parser.set_defaults(func=download)
     download_parser.add_argument(
@@ -180,6 +181,7 @@ def main() -> int:
         help="Query the USGS Geocoder.",
         description="Query the USGS Geocoder.",
         formatter_class=ArgumentDefaultsHelpFormatter,
+        epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>",
     )
     geocode_parser.set_defaults(func=geocode)
     geocode_parser.add_argument(
@@ -197,6 +199,7 @@ def main() -> int:
         help="Translate between known grids and coordinates.",
         description="Translate between known grids and coordinates.",
         formatter_class=ArgumentDefaultsHelpFormatter,
+        epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>",
     )
     grid2ll_parser.set_defaults(func=grid2ll)
     grid2ll_parser.add_argument(
