@@ -1,27 +1,10 @@
 # callusgs
 
-Implementation of USGS's machine-to-machine API 
-
-## Features
-
-`callusgs` is both a python package and a suite of command line tools.
+`callusgs` aims to be a complete and (mostly) typed implementation of USGS's machine-to-machine API (v1.5.0).
+In addition, `callusgs` provides a suite of command line tools that can be used to query and download scenes, 
+use the geocoding service provided by the USGSS and convert WRS 1/2 *coordinates* to geographic coordinates.
 
 ## Installation
-
-### Prerequisites
-
-To fully use the package's/the API's functionality you need (1) an account at USGS and (2) access to M2M MACHINE role.
-While the first one is mandatory, the functionality without access to the M2M MACHINE role is restricted.
-The account credentials need to be passed to the command line tools via CLI arguments or by setting the environment variables
-`USGS_USERNAME` and `USGS_AUTH`.
-
-|              **Feature/Functionality**             | **Usable** |                               **Note**                               |
-|:--------------------------------------------------:|:----------:|:--------------------------------------------------------------------:|
-| Searching for scenes                               | Yes        |                                                                      |
-| Creating scene lists out of search results         | Yes        |                                                                      |
-| Generate orders from scene searches or scene lists | No         | Downloading orders from list, when order was placed via webinterface |
-| Geocoding                                          | Yes        |                                                                      |
-| WRS1/WRS2 to coordinate transformation             | Yes        |                                                                      |
 
 Install the package together with the respective command line applications from pip.
 
@@ -38,6 +21,21 @@ pipx install callusgs
 ## Usage
 
 For more detailed usage instructions and/or examples, please refer to the [documentation](https://callusgs.readthedocs.io) or see the section below.
+
+### Prerequisites
+
+To fully use the package's/the API's functionality you need (1) an account at USGS and (2) access to M2M MACHINE role.
+While the first one is mandatory, the functionality without access to the M2M MACHINE role is restricted.
+The account credentials need to be passed to the command line tools via CLI arguments or by setting the environment variables
+`USGS_USERNAME` and `USGS_AUTH`.
+
+|              **Feature/Functionality**             | **Usable** |                               **Note**                               |
+|:--------------------------------------------------:|:----------:|:--------------------------------------------------------------------:|
+| Searching for scenes                               | Yes        |                                                                      |
+| Creating scene lists out of search results         | Yes        |                                                                      |
+| Generate orders from scene searches or scene lists | No         | Downloading orders from list, when order was placed via webinterface |
+| Geocoding                                          | Yes        |                                                                      |
+| WRS1/WRS2 to coordinate transformation             | Yes        |                                                                      |
 
 ### Command Line Tool Examples
 
@@ -79,6 +77,27 @@ callusgs geocode
 callusgs grid2ll
 ```
 
+## Features
+
+`callusgs` is both a python package and a suite of command line tools.
+
+Currently supported products for download are:
+
+|   **Product string**   |           **Prodcut Name**           |
+|:----------------------:|:------------------------------------:|
+| `landsat_em_c2_l1`     | Landsat 4/5 Collection 2 Level 1     |
+| `landsat_em_c2_l2`     | Landsat 4/5 Collection 2 Level 1     |
+| `landsat_etm_c2_l1`    | Landsat 7 Collection 2 Level 1       |
+| `landsat_etm_c2_l2`    | Landsat 7 Collection 2 Level 2       |
+| `landsat_ot_c2_l1`     | Landsat 8/9 Collection 2 Level 1     |
+| `landsat_ot_c2_l2`     | Landsat 8/9 Collection 2 Level 2     |
+| `landsat_ba_tile_c2`   | Landsat Burned Area Product          |
+| `landsat_dswe_tile_c2` | Landsat Dynamic Surface Water Extent |
+| `landsat_fsca_tile_c2` | Landsat Fractional Snow Covered Area |
+<!-- | `gmted2010@7.5`        | GMTED 2010 DEM at 7.5 arc seconds    | -->
+<!-- | `gmted2010@15`         | GMTED 2010 DEM at 15 arc seconds     | -->
+<!-- | `gmted2010@30`         | GMTED 2010 DEM at 30 arc seconds     | -->
+
 ## Documentation
 
 See the docs folder for raw documentation or visit [callusgs.readthedocs.io](https://callusgs.readthedocs.io).
@@ -92,11 +111,10 @@ See the docs folder for raw documentation or visit [callusgs.readthedocs.io](htt
 
 If you use this software, please use the bibtex entry below or refer to [the citation file](CITATION.cff).
 
-```
-@software{callusgs,
+```tex
+@software{Katerndahl2024,
 author = {Katerndahl, Florian},
-license = {GPL-2.0},
-title = {{callusgs}},
+title = {callusgs},
 url = {https://github.com/Florian-Katerndahl/callusgs}
 }
 ```
