@@ -104,12 +104,12 @@ def download(args: Namespace):
         if coordinates.type == "Polygon" and args.aoi_type == "Mbr":
             coordinates = (
                 Types.Coordinate(
-                    min([lat for lon, lat in coordinates.coordinates]),
-                    min([lon for lon, lat in coordinates.coordinates]),
+                    min([lat for i in coordinates.coordinates for lon, lat in i]),
+                    min([lon for i in coordinates.coordinates for lon, lat in i]),
                 ),
                 Types.Coordinate(
-                    max([lat for lon, lat in coordinates.coordinates]),
-                    max([lon for lon, lat in coordinates.coordinates]),
+                    max([lat for i in coordinates.coordinates for lon, lat in i]),
+                    max([lon for i in coordinates.coordinates for lon, lat in i]),
                 ),
             )
     if args.aoi_file:
@@ -143,11 +143,18 @@ def download(args: Namespace):
     ) as ee_session:
         report_usgs_messages(ee_session.notifications("EE").data)
         report_usgs_messages(ee_session.notifications("M2M").data)
-        report_usgs_messages(ee_session.dataset_messages("EE", dataset_name=args.product).data)
+        report_usgs_messages(
+            ee_session.dataset_messages("EE", dataset_name=args.product).data
+        )
 
-        if "order" not in ee_session.permissions().data or "download" not in ee_session.permissions().data:
-            raise RuntimeError("Either 'order' or 'downlaod' permission not present for user. "
-                               "Did you request access to the M2M API from your ERS profile at 'https://ers.cr.usgs.gov/profile/access'?")
+        if (
+            "order" not in ee_session.permissions().data
+            or "download" not in ee_session.permissions().data
+        ):
+            raise RuntimeError(
+                "Either 'order' or 'downlaod' permission not present for user. "
+                "Did you request access to the M2M API from your ERS profile at 'https://ers.cr.usgs.gov/profile/access'?"
+            )
 
         # use scene-search to query scenes
         entities = []
@@ -241,7 +248,12 @@ def download(args: Namespace):
             f"Request {retrieved_downloads.request_id} in session {retrieved_downloads.session_id}: Retrieved download queue"
         )
         ueids, download_dict, preparing_ueids = downloadable_and_preparing_scenes(
-            [i for i in retrieved_downloads.data["available"] + retrieved_downloads.data["requested"] if "Product Bundle" in i["productName"]]
+            [
+                i
+                for i in retrieved_downloads.data["available"]
+                + retrieved_downloads.data["requested"]
+                if "Product Bundle" in i["productName"]
+            ]
         )
 
         assert len(ueids) == len(download_dict) and (
@@ -261,18 +273,44 @@ def download(args: Namespace):
             )
             ueids, new_download_dict, new_preparing_ueids = (
                 downloadable_and_preparing_scenes(
-                    [i for i in retrieved_downloads.data["available"] + retrieved_downloads.data["requested"] if "Product Bundle" in i["productName"]],
+                    [
+                        i
+                        for i in retrieved_downloads.data["available"]
+                        + retrieved_downloads.data["requested"]
+                        if "Product Bundle" in i["productName"]
+                    ],
                     ueids,
                 )
             )
             download_dict.update(new_download_dict)
             preparing_ueids.difference_update(new_preparing_ueids)
 
-        assert len(ueids) == len(download_dict) and len(download_dict) == len(entities),\
-            "How are scenes missing at this point?"
+        assert len(ueids) == len(download_dict) and len(download_dict) == len(
+            entities
+        ), "How are scenes missing at this point?"
 
-        ## use download method to download files
-        _ = thread_map(partial(singular_download, connection=ee_session, outdir=args.outdir), download_dict.items(), max_workers=5, desc="Total scenes downloaded")
+        attempt = 0
+        while download_dict and attempt <= 3:
+            ## use download method to download files
+            downloaded_scenes = thread_map(
+                partial(singular_download, connection=ee_session, outdir=args.outdir),
+                download_dict.items(),
+                max_workers=5,
+                desc="Total scenes downloaded",
+            )
+
+            for downloaded_scene in downloaded_scenes:
+                _ = download_dict.pop(downloaded_scene, None)
+
+            if download_dict:
+                attempt += 1
+                download_logger.info(
+                    f"Missing {len(download_dict)} scenes. Trying again in {30 * attempt} seconds"
+                )
+                sleep(30 * attempt)
+
+        if attempt == 3:
+            download_logger.error(f"{len(download_dict)} have not been downloaded")
 
         ## and now delete the label (i.e. remove order from download queue)
         ee_session.download_order_remove(label=download_label)

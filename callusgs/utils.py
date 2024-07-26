@@ -144,3 +144,5 @@ def singular_download(download_item: Dict, connection: Api, outdir: Path) -> Non
         connection.download_remove(k)
     except RuntimeError as e:
         utils_logger.error(f"Failed to download {v['entityId']}: {e}")
+    
+    return k
