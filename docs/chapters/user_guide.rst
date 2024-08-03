@@ -26,6 +26,7 @@ to use the Api to its full potential.
     +-----------------------------------------------+--------+---------------------------------------+
     | | Generate orders from scene searches         | No     | | Downloading orders from list, when  |
     | | or scene lists                              |        | | order was placed via webinterface   |
+    | |                                             |        | | is possible                         |
     +-----------------------------------------------+--------+---------------------------------------+
     | Geocoding                                     | Yes    |                                       |
     +-----------------------------------------------+--------+---------------------------------------+

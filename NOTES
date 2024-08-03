@@ -6,17 +6,9 @@
 
 => Is fileGroupIds something I need?
 ---------------
-For idea for subprograms... (callusgs search; callusgs download; callusgs geocode; etc.)
-https://chase-seibert.github.io/blog/2014/03/21/python-multilevel-argparse.html
----------------
-after querying downloads and retrieving the URL file sizes etc. it is crucial to remember the downloadId and call download_remove afterwards to remove respective downloads from list
-    download_search is also important for that - porbably
------
 might actually need to perform all downloads via BULK download
 -----
 set user context in CLI tools
------
-get username and password via environment variables (sys.getenv())
 -----
 You have to specifically ask for certain datasets -> CHECK IF I CAN DOWNLOAD OTHERS NONETHELESS!
 -----

@@ -29,13 +29,13 @@ While the first one is mandatory, the functionality without access to the M2M MA
 The account credentials need to be passed to the command line tools via CLI arguments or by setting the environment variables
 `USGS_USERNAME` and `USGS_AUTH`.
 
-|              **Feature/Functionality**             | **Usable** |                               **Note**                               |
-|:--------------------------------------------------:|:----------:|:--------------------------------------------------------------------:|
-| Searching for scenes                               | Yes        |                                                                      |
-| Creating scene lists out of search results         | Yes        |                                                                      |
-| Generate orders from scene searches or scene lists | No         | Downloading orders from list, when order was placed via webinterface |
-| Geocoding                                          | Yes        |                                                                      |
-| WRS1/WRS2 to coordinate transformation             | Yes        |                                                                      |
+|              **Feature/Functionality**             | **Usable** |                               **Note**                                           |
+|:--------------------------------------------------:|:----------:|:--------------------------------------------------------------------------------:|
+| Searching for scenes                               | Yes        |                                                                                  |
+| Creating scene lists out of search results         | Yes        |                                                                                  |
+| Generate orders from scene searches or scene lists | No         | Downloading orders from list, when order was placed via webinterface is possible |
+| Geocoding                                          | Yes        |                                                                                  |
+| WRS1/WRS2 to coordinate transformation             | Yes        |                                                                                  |
 
 ### Command Line Tool Examples
 
