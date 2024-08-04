@@ -217,8 +217,12 @@ def main() -> int:
         help="What type of geometry should be returned - "
         "a bounding box polygon or a center point?",
     )
-    grid2ll_parser.add_argument("path", type=str, help="The x coordinate in the grid system")
-    grid2ll_parser.add_argument("row", type=str, help="The y coordinate in the grid system")
+    grid2ll_parser.add_argument(
+        "coordinates",
+        type=str, 
+        nargs="+",
+        help="The xy coordinate pairs in the grid system. "
+             "Coordinate pairs must be given as X1,Y1 X2,Y2 ...")
 
     args = parent_parser.parse_args()
     args.func(args)

@@ -67,14 +67,22 @@ callusgs -vv --dry-run download --product landsat_etm_c2_l1 \
 
 #### Geocode
 
+The USGS supplies a simplistic geocoding/POI-search endpoint which can be queries using the `geocode` sub-program.
+The snippet below queries all U.S. features whos placename attribute matches "New York".
+
+> Right now, the `placename` endpoint, which is called under the hood, does not return any results for features of type "world"!
+
 ```bash
-callusgs geocode
+callusgs geocode --feature-type US "New York"
 ```
 
 #### Grid2ll
 
+Get either centroids or polygons of the WRS2 or WRS2 coordinate system based on geographic coordinates in WGS84 (EPSG:4326) inputs.
+The snipped below queries the centroid coordinates for three points in the WRS2 system.
+
 ```bash
-callusgs grid2ll
+callusgs grid2ll --response-shape point 52,11 32,5 89,69
 ```
 
 ## Features
@@ -97,6 +105,9 @@ Currently supported products for download are:
 <!-- | `gmted2010@7.5`        | GMTED 2010 DEM at 7.5 arc seconds    | -->
 <!-- | `gmted2010@15`         | GMTED 2010 DEM at 15 arc seconds     | -->
 <!-- | `gmted2010@30`         | GMTED 2010 DEM at 30 arc seconds     | -->
+
+## Known Limitations
+
 
 ## Documentation
 

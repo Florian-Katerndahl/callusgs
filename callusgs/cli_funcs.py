@@ -5,6 +5,7 @@ import logging
 from itertools import islice
 import json
 from functools import partial
+from typing import List
 
 from tqdm.contrib.concurrent import thread_map
 
@@ -320,10 +321,24 @@ def download(args: Namespace):
 def geocode(args: Namespace):
     geocode_logger = logging.getLogger("callusgs")
     with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
-        print(vars(ee_session.placename(args.feature, args.name)))
+        report_usgs_messages(ee_session.notifications("M2M").data)
+        geocode_logger.info("Successfully connected to API endpoint")
+        geocode_response = ee_session.placename(args.feature, args.name)
+        print(geocode_response.data["results"] or "No results found!")
 
 
 def grid2ll(args: Namespace):
     grid2ll_logger = logging.getLogger("callusgs")
+    accumulated_output: List = []
+
+    assert len(args.coordinates) > 0, \
+        "Must give at least one WRS coordinate pair"
+
     with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
-        print(ee_session.grid2ll(args.grid, args.response_shape, args.path, args.row))
+        report_usgs_messages(ee_session.notifications("M2M").data)
+        grid2ll_logger.info("Successfully connected to API endpoint")
+        for path_row in args.coordinates:
+            grid_response = ee_session.grid2ll(args.grid, args.response_shape, *path_row.split(","))
+            accumulated_output.append(grid_response.data)
+    
+    print(accumulated_output)
