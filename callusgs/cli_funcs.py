@@ -19,6 +19,7 @@ from callusgs.utils import (
     singular_download,
     get_user_rate_limits,
 )
+from callusgs import ExitCodes
 
 api_logger = logging.getLogger("callusgs")
 
@@ -170,13 +171,13 @@ def download(args: Namespace):
 
         if initially_discovered_products == 0:
             download_logger.warning("Found no scenes")
-            exit(0)
+            exit(ExitCodes.E_OK)
         elif initially_discovered_products > 20_000:
             download_logger.warning(
                 "Found more than 20 000 scenes. The maximun number of scenes to request is 20 000. "
                 "Please choose a narrower query (e.g. shorter time frame or more stringent cloud cover)."
             )
-            exit(1)
+            exit(ExitCodes.E_LARGEORDER)
 
         entities.extend(
             search_result["entityId"]
@@ -236,7 +237,7 @@ def download(args: Namespace):
             ## and now delete the label (i.e. remove order from download queue)
             ee_session.download_order_remove(label=download_label)
             download_logger.debug(f"Removed order {download_label}")
-            exit(0)
+            exit(ExitCodes.E_OK)
 
         _, pending_download_limit, unattempted_download_limit = get_user_rate_limits(
             ee_session
@@ -247,7 +248,7 @@ def download(args: Namespace):
                 "Please re-start the query with tighter search bounds (e.g. shorter date range)."
                 "In case this error persists, clean your download queue via `callusgs clean`."
             )
-            exit(1)
+            exit(ExitCodes.E_RATELIMIT)
 
         ## use download-request to request products and set a label
         requested_downloads = ee_session.download_request(
@@ -265,7 +266,7 @@ def download(args: Namespace):
         ):
             download_logger.error("Order failed due to unknown error. Aborting.")
             download_logger.debug(json.dumps(requested_downloads.data, indent=2))
-            exit(1)
+            exit(ExitCodes.E_UNKNOWN)
 
         ## check if all scenes are in ordered status. If so, exit the program
         download_search_response = ee_session.download_search(
@@ -274,18 +275,16 @@ def download(args: Namespace):
         download_logger.info(
             f"Request {download_search_response.request_id} in session {download_search_response.session_id}: Queried all downloads within queue"
         )
-        ordered_downloads = 0
         for order in download_search_response.data:
             if (
-                order["statusText"] == "Ordered"
-                and "Product Bundle" in order["productName"]
+                "Product Bundle" in order["productName"]
+                and order["statusText"] == "Ordered"
             ):
-                ordered_downloads += 1
-        if ordered_downloads == len(entities):
-            download_logger.error(
-                "All scenes are in 'Ordered' status. Please try again later"
-            )
-            exit(0)
+                download_logger.error(
+                "At least one scenes is in 'Ordered' status, only attempting complete orders. "
+                "Please try again later"
+                )
+                exit(ExitCodes.E_ORDERINCOMPLETE)            
 
         ## use download-retrieve to retrieve products, regardless of their status (can be checked to if looping over requested downloads is needed)
         ueids = set()
@@ -320,7 +319,7 @@ def download(args: Namespace):
                     "Please re-start the query with tighter search bounds (e.g. shorter date range)."
                     "In case this error persists, clean your download queue via `callusgs clean`."
                 )
-                exit(1)
+                exit(ExitCodes.E_RATELIMIT)
 
             download_logger.info(
                 "Did not get all downloads, trying again in 30 seconds"
@@ -346,7 +345,7 @@ def download(args: Namespace):
 
         assert len(ueids) == len(download_dict) and len(download_dict) == len(
             entities
-        ), "Some scenes are still not ready for download. This happens when scenes are being ordered. Try again later."
+        ), "Ok, now I'm curious how you got here"
 
         attempt = 0
         while download_dict and attempt <= 3:
@@ -374,6 +373,8 @@ def download(args: Namespace):
         ## and now delete the label (i.e. remove order from download queue)
         ee_session.download_order_remove(label=download_label)
         download_logger.info(f"Removed order {download_label}")
+    
+    return ExitCodes.E_OK
 
 
 def geocode(args: Namespace):
