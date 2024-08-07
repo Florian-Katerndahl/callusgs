@@ -33,6 +33,7 @@ from callusgs.types import (
 from callusgs.errors import (
     AuthenticationEarthExplorerException,
     GeneralEarthExplorerException,
+    RateLimitEarthExplorerException,
 )
 
 api_logger = logging.getLogger("callusgs.api")
@@ -57,6 +58,7 @@ class Api:
         self.auth = auth
         self.logger = logging.getLogger("callusgs.api.Api")
         self.logger.setLevel(logging.DEBUG)
+        self.last_request = None
 
     def __enter__(self) -> "Api":
         self.logger.debug("Entering context manager")
@@ -89,7 +91,15 @@ class Api:
         :return: Response object
         :rtype: requests.Response
         """
-        return requests.get(url, headers=self.headers, stream=stream, timeout=1200)
+        self.last_request = datetime.now()
+        r = requests.get(url, headers=self.headers, stream=stream, timeout=1200)
+        
+        if r.status_code == 429:
+            raise RateLimitEarthExplorerException
+        else:
+            r.raise_for_status()
+
+        return r
 
     def _call_post(
         self,
@@ -119,14 +129,14 @@ class Api:
         SECONDS_PER_HOUR: int = 3600
         if (
             self.login_timestamp is not None
-            and (datetime.now() - self.login_timestamp).total_seconds() >= SECONDS_PER_HOUR * 2
+            and (datetime.now() - self.last_request).total_seconds() >= SECONDS_PER_HOUR * 2
         ):
             if not self.relogin:
                 raise AuthenticationEarthExplorerException(
-                    "Two hours have passed since you logged in, api session token expired. Please login again!"
+                    "Two hours have passed since the last request, api session token expired. Please login again!"
                 )
 
-            self.logger.warning("Maximum API conncetion time reached. Trying to reconnect...")
+            self.logger.warning("Maximum API conncetion time after inactivity reached. Trying to reconnect...")
             match self.login_method:
                 case "token":
                     self.login_token(self.user, self.auth)
@@ -144,6 +154,7 @@ class Api:
             Api.ENDPOINT + endpoint, headers=self.headers, timeout=1200, **kwargs
         ) as r:
             self.logger.debug(f"Post request to {Api.ENDPOINT + endpoint}")
+            self.last_request = datetime.now()
             if conversion == "text":
                 message_content: ApiResponse = ApiResponse(**loads(r.text))
             elif conversion == "binary":
@@ -935,7 +946,6 @@ class Api:
         no_progess: Optional[bool] = False,
     ) -> None:
         result = self._call_get(url)
-        result.raise_for_status()
 
         file_name = unquote(
             result.headers["content-disposition"].split("filename=").pop().strip('"')
@@ -1001,7 +1011,6 @@ class Api:
         return self._call_post("grid2ll", data=post_payload)
 
     def login(self, username: str, password: str, user_context: Any = None):
-        # TODO show notifications after successfull login? Maybe something for an app, not the api integration
         """
         Upon a successful login, an API key will be returned. This key will be active for two
         hours and should be destroyed upon final use of the service by calling the logout method.
@@ -1228,7 +1237,6 @@ class Api:
         feature_type: Optional[Literal["US", "World"]] = None,
         name: Optional[str] = None,
     ) -> ApiResponse:
-        # TODO return type is wrong
         """
         Geocoder
 
@@ -2032,7 +2040,7 @@ class Api:
     def user_preferences_set(
         self,
         system_id: Optional[str] = None,
-        user_preferences: Optional[List[str]] = None,
+        user_preferences: Optional[Dict[str, str]] = None,
     ) -> None:
         """
         This method is used to create or update user's preferences.
@@ -2040,7 +2048,7 @@ class Api:
         :param system_id: Used to identify which system the preferences are for, defaults to None
         :type system_id: Optional[str], optional
         :param user_preferences: Used to set user preferences for various systems, defaults to None
-        :type user_preferences: Optional[List[str]], optional
+        :type user_preferences: Optional[Dict[str]], optional
 
         :raises HTTPError:
 
@@ -2069,7 +2077,6 @@ class Api:
 
         Api.user_preferences_set("EE", preferences)
         """
-        # TODO N° 2
         payload: Dict = {"systemId": system_id, "userPreferences": user_preferences}
         post_payload = dumps(payload, default=vars)
         self.logger.debug(f"POST request body: {dumps(post_payload)}")
