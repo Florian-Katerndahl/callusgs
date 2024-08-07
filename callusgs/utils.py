@@ -172,4 +172,5 @@ def singular_download(download_item: Dict, connection: Api, outdir: Path) -> Non
 
 def get_user_rate_limits(connection: Api) -> List[int]:
     rate_limit_results = connection.rate_limit_summary()
-    return [i for i in rate_limit_results.data["remainingLimits"] if i["limitType"] == "user"]
+    user_limits = [i for i in rate_limit_results.data["remainingLimits"] if i["limitType"] == "user"].pop()
+    return user_limits["recentDownloadCount"], user_limits["pendingDownloadCount"], user_limits["unattemptedDownloadCount"]

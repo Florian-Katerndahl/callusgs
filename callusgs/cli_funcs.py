@@ -171,6 +171,12 @@ def download(args: Namespace):
         if initially_discovered_products == 0:
             download_logger.warning("Found no scenes")
             exit(0)
+        elif initially_discovered_products > 20_000:
+            download_logger.warning(
+                "Found more than 20 000 scenes. The maximun number of scenes to request is 20 000. "
+                "Please choose a narrower query (e.g. shorter time frame or more stringent cloud cover)."
+            )
+            exit(1)
 
         entities.extend(
             search_result["entityId"]
@@ -203,7 +209,7 @@ def download(args: Namespace):
         ## use download-options to get id which is needed for download together with entityId; only if product is marked as available and potentially secondary file groups set to true
         ##      I don't fully understand all of the other scene entires in the response but filtering for "available" works and only gets the product bundles
         entity_download_options = ee_session.download_options(
-            args.product, entities, include_secondary_file_groups=False
+            args.product, entities, include_secondary_file_groups=True
         )
         download_logger.info(
             f"Request {entity_download_options.request_id} in session {entity_download_options.session_id}: Requested download options"
@@ -213,7 +219,7 @@ def download(args: Namespace):
         total_size = 0
         for i in entity_download_options.data:
             # band files are marked as not available; but since I'm only interested in product bundles I don't care
-            if i["available"]:
+            if i["available"] and "Product Bundle" in i["productName"]:
                 available_downloads.append((i["entityId"], i["id"]))
                 total_size += i["filesize"]
         downloads_to_request = [
@@ -232,22 +238,54 @@ def download(args: Namespace):
             download_logger.debug(f"Removed order {download_label}")
             exit(0)
 
-        _, pending_download_limit, unattempted_download_limit = get_user_rate_limits(ee_session)
+        _, pending_download_limit, unattempted_download_limit = get_user_rate_limits(
+            ee_session
+        )
         if pending_download_limit == 0 or unattempted_download_limit == 0:
-            # TODO 5
-            download_logger.critical("Maximum number of pending or unattempted downloads reached. No download/ will be performed to remedy loss of data."
-                                    "Please re-start the query with tighter search bounds (e.g. shorter date range)."
-                                    "In case this error persists, clean your download queue via `callusgs clean`.")
+            download_logger.critical(
+                "Maximum number of pending or unattempted downloads reached. No download/ will be performed to remedy loss of data."
+                "Please re-start the query with tighter search bounds (e.g. shorter date range)."
+                "In case this error persists, clean your download queue via `callusgs clean`."
+            )
             exit(1)
 
-        # TODO change test to order
         ## use download-request to request products and set a label
         requested_downloads = ee_session.download_request(
-            "test", downloads=downloads_to_request, label=download_label
+            "order", downloads=downloads_to_request, label=download_label
         )
         download_logger.info(
             f"Request {requested_downloads.request_id} in session {requested_downloads.session_id}: Requested downloads for available scenes"
         )
+        if (
+            requested_downloads.data["numInvalidScenes"]
+            and not requested_downloads.data["availableDownloads"]
+            and not requested_downloads.data["duplicateProducts"]
+            and not requested_downloads.data["preparingDownloads"]
+            and not requested_downloads.data["newRecords"]
+        ):
+            download_logger.error("Order failed due to unknown error. Aborting.")
+            download_logger.debug(json.dumps(requested_downloads.data, indent=2))
+            exit(1)
+
+        ## check if all scenes are in ordered status. If so, exit the program
+        download_search_response = ee_session.download_search(
+            active_only=False, label=download_label, download_application="M2M"
+        )
+        download_logger.info(
+            f"Request {download_search_response.request_id} in session {download_search_response.session_id}: Queried all downloads within queue"
+        )
+        ordered_downloads = 0
+        for order in download_search_response.data:
+            if (
+                order["statusText"] == "Ordered"
+                and "Product Bundle" in order["productName"]
+            ):
+                ordered_downloads += 1
+        if ordered_downloads == len(entities):
+            download_logger.error(
+                "All scenes are in 'Ordered' status. Please try again later"
+            )
+            exit(0)
 
         ## use download-retrieve to retrieve products, regardless of their status (can be checked to if looping over requested downloads is needed)
         ueids = set()
@@ -266,18 +304,22 @@ def download(args: Namespace):
             ]
         )
 
-        assert len(ueids) == len(download_dict) and (
+        assert len(ueids) == len(download_dict) or (
             len(ueids) + len(preparing_ueids)
         ) == len(entities), "Hm, now here are scenes missing"
 
         # TODO come up with a nicer way to do this
         #   This now bloack download until all scenes are available
         while preparing_ueids:
-            _, pending_download_limit, unattempted_download_limit = get_user_rate_limits(ee_session)
+            _, pending_download_limit, unattempted_download_limit = (
+                get_user_rate_limits(ee_session)
+            )
             if pending_download_limit == 0 or unattempted_download_limit == 0:
-                download_logger.critical("Maximum number of pending or unattempted downloads reached. No download will be performed to remedy loss of data."
-                                         "Please re-start the query with tighter search bounds (e.g. shorter date range)."
-                                         "In case this error persists, clean your download queue via `callusgs clean`.")
+                download_logger.critical(
+                    "Maximum number of pending or unattempted downloads reached. No download will be performed to remedy loss of data."
+                    "Please re-start the query with tighter search bounds (e.g. shorter date range)."
+                    "In case this error persists, clean your download queue via `callusgs clean`."
+                )
                 exit(1)
 
             download_logger.info(
@@ -304,7 +346,7 @@ def download(args: Namespace):
 
         assert len(ueids) == len(download_dict) and len(download_dict) == len(
             entities
-        ), "How are scenes missing at this point?"
+        ), "Some scenes are still not ready for download. This happens when scenes are being ordered. Try again later."
 
         attempt = 0
         while download_dict and attempt <= 3:
@@ -379,16 +421,17 @@ def grid2ll(args: Namespace):
 
     accumulated_output: List = []
 
-    assert len(args.coordinates) > 0, \
-        "Must give at least one WRS coordinate pair"
+    assert len(args.coordinates) > 0, "Must give at least one WRS coordinate pair"
 
     with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
         report_usgs_messages(ee_session.notifications("M2M").data)
         grid2ll_logger.info("Successfully connected to API endpoint")
         for path_row in args.coordinates:
-            grid_response = ee_session.grid2ll(args.grid, args.response_shape, *path_row.split(","))
+            grid_response = ee_session.grid2ll(
+                args.grid, args.response_shape, *path_row.split(",")
+            )
             accumulated_output.append(grid_response.data)
-    
+
     print(accumulated_output)
 
 
@@ -418,7 +461,7 @@ def clean(args: Namespace):
         unique_labels = set()
         for entry in searched_labels.data:
             unique_labels.add(entry["label"])
-        
+
         for label in unique_labels:
             ee_session.download_order_remove(label)
             clean_logger.info(f"Deleted download order {label}")
