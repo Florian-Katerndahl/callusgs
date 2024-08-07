@@ -1,6 +1,1 @@
-GENERAL:
-- [ ] respect API limits (see 1); this does not quite work out with retries etc. given the current implementation
-
-1. handle rate limits (HTTP 429) gracefully
-2. create a custom type for the preferences? Probably not, dict is fine in this context
 4. can I set myself as a download application? I.e. "callusgs"

@@ -6,7 +6,7 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from pathlib import Path
 from os import environ
 
-from callusgs.cli_funcs import download, geocode, grid2ll
+from callusgs.cli_funcs import download, geocode, grid2ll, clean
 
 
 def main() -> int:
@@ -223,6 +223,15 @@ def main() -> int:
         nargs="+",
         help="The xy coordinate pairs in the grid system. "
              "Coordinate pairs must be given as X1,Y1 X2,Y2 ...")
+
+    clean_parser = subparsers.add_parser(
+        "clean",
+        help="",
+        description="",
+        formatter_class=ArgumentDefaultsHelpFormatter,
+        epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>",
+    )
+    clean_parser.set_defaults(func=clean)
 
     args = parent_parser.parse_args()
     args.func(args)

@@ -17,6 +17,7 @@ from callusgs.utils import (
     report_usgs_messages,
     downloadable_and_preparing_scenes,
     singular_download,
+    get_user_rate_limits,
 )
 
 api_logger = logging.getLogger("callusgs")
@@ -231,6 +232,14 @@ def download(args: Namespace):
             download_logger.debug(f"Removed order {download_label}")
             exit(0)
 
+        _, pending_download_limit, unattempted_download_limit = get_user_rate_limits(ee_session)
+        if pending_download_limit == 0 or unattempted_download_limit == 0:
+            # TODO 5
+            download_logger.critical("Maximum number of pending or unattempted downloads reached. No download/ will be performed to remedy loss of data."
+                                    "Please re-start the query with tighter search bounds (e.g. shorter date range)."
+                                    "In case this error persists, clean your download queue via `callusgs clean`.")
+            exit(1)
+
         # TODO change test to order
         ## use download-request to request products and set a label
         requested_downloads = ee_session.download_request(
@@ -264,6 +273,13 @@ def download(args: Namespace):
         # TODO come up with a nicer way to do this
         #   This now bloack download until all scenes are available
         while preparing_ueids:
+            _, pending_download_limit, unattempted_download_limit = get_user_rate_limits(ee_session)
+            if pending_download_limit == 0 or unattempted_download_limit == 0:
+                download_logger.critical("Maximum number of pending or unattempted downloads reached. No download will be performed to remedy loss of data."
+                                         "Please re-start the query with tighter search bounds (e.g. shorter date range)."
+                                         "In case this error persists, clean your download queue via `callusgs clean`.")
+                exit(1)
+
             download_logger.info(
                 "Did not get all downloads, trying again in 30 seconds"
             )
@@ -310,7 +326,7 @@ def download(args: Namespace):
                 )
                 sleep(30 * attempt)
 
-        if attempt == 3:
+        if attempt >= 3:
             download_logger.error(f"{len(download_dict)} have not been downloaded")
 
         ## and now delete the label (i.e. remove order from download queue)
@@ -319,7 +335,23 @@ def download(args: Namespace):
 
 
 def geocode(args: Namespace):
-    geocode_logger = logging.getLogger("callusgs")
+    geocode_logger = logging.getLogger("callusgs.geocode")
+    logging.basicConfig(
+        level=(
+            logging.DEBUG
+            if args.very_verbose
+            else logging.INFO if args.verbose else logging.WARNING
+        ),
+        format="%(asctime)s [%(name)s %(levelname)s]: %(message)s",
+    )
+    for handler in logging.root.handlers:
+        handler.addFilter(logging.Filter("callusgs"))
+        handler.setLevel(
+            logging.DEBUG
+            if args.very_verbose
+            else logging.INFO if args.verbose else logging.WARNING
+        )
+
     with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
         report_usgs_messages(ee_session.notifications("M2M").data)
         geocode_logger.info("Successfully connected to API endpoint")
@@ -328,7 +360,23 @@ def geocode(args: Namespace):
 
 
 def grid2ll(args: Namespace):
-    grid2ll_logger = logging.getLogger("callusgs")
+    grid2ll_logger = logging.getLogger("callusgs.grid2ll")
+    logging.basicConfig(
+        level=(
+            logging.DEBUG
+            if args.very_verbose
+            else logging.INFO if args.verbose else logging.WARNING
+        ),
+        format="%(asctime)s [%(name)s %(levelname)s]: %(message)s",
+    )
+    for handler in logging.root.handlers:
+        handler.addFilter(logging.Filter("callusgs"))
+        handler.setLevel(
+            logging.DEBUG
+            if args.very_verbose
+            else logging.INFO if args.verbose else logging.WARNING
+        )
+
     accumulated_output: List = []
 
     assert len(args.coordinates) > 0, \
@@ -342,3 +390,35 @@ def grid2ll(args: Namespace):
             accumulated_output.append(grid_response.data)
     
     print(accumulated_output)
+
+
+def clean(args: Namespace):
+    clean_logger = logging.getLogger("callusgs.clean")
+    logging.basicConfig(
+        level=(
+            logging.DEBUG
+            if args.very_verbose
+            else logging.INFO if args.verbose else logging.WARNING
+        ),
+        format="%(asctime)s [%(name)s %(levelname)s]: %(message)s",
+    )
+    for handler in logging.root.handlers:
+        handler.addFilter(logging.Filter("callusgs"))
+        handler.setLevel(
+            logging.DEBUG
+            if args.very_verbose
+            else logging.INFO if args.verbose else logging.WARNING
+        )
+
+    with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
+        searched_labels = ee_session.download_labels()
+        clean_logger.info(
+            f"Request {searched_labels.request_id} in session {searched_labels.session_id}: Retrieved download labels"
+        )
+        unique_labels = set()
+        for entry in searched_labels.data:
+            unique_labels.add(entry["label"])
+        
+        for label in unique_labels:
+            ee_session.download_order_remove(label)
+            clean_logger.info(f"Deleted download order {label}")
