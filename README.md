@@ -4,6 +4,30 @@
 In addition, `callusgs` provides a suite of command line tools that can be used to query and download scenes, 
 use the geocoding service provided by the USGSS and convert WRS 1/2 *coordinates* to geographic coordinates.
 
+## Features
+
+`callusgs` is both a Python package and a suite of command line tools that allows
+
+1. Downloading of select products (see table below)
+1. Access to the USGS *geocoding* API
+1. Conversion between the WRS1 and WRS2 grids to geographic coordinates and
+1. clean up of download order queues (mainly as utility functionality)
+
+Currently supported products for download are:
+
+|   **Product string**   |           **Prodcut Name**           |
+|:----------------------:|:------------------------------------:|
+| `landsat_em_c2_l1`     | Landsat 4/5 Collection 2 Level 1     |
+| `landsat_em_c2_l2`     | Landsat 4/5 Collection 2 Level 1     |
+| `landsat_etm_c2_l1`    | Landsat 7 Collection 2 Level 1       |
+| `landsat_etm_c2_l2`    | Landsat 7 Collection 2 Level 2       |
+| `landsat_ot_c2_l1`     | Landsat 8/9 Collection 2 Level 1     |
+| `landsat_ot_c2_l2`     | Landsat 8/9 Collection 2 Level 2     |
+| `landsat_ba_tile_c2`   | Landsat Burned Area Product          |
+| `landsat_dswe_tile_c2` | Landsat Dynamic Surface Water Extent |
+| `landsat_fsca_tile_c2` | Landsat Fractional Snow Covered Area |
+| `gmted2010`            | GMTED 2010 DEM                       |
+
 ## Installation
 
 Install the package together with the respective command line applications from pip.
@@ -93,26 +117,11 @@ The `clean` subprogram is used to delete dangeling product/scene orders.
 callusgs -v clean
 ```
 
-## Features
-
-`callusgs` is both a python package and a suite of command line tools.
-
-Currently supported products for download are:
-
-|   **Product string**   |           **Prodcut Name**           |
-|:----------------------:|:------------------------------------:|
-| `landsat_em_c2_l1`     | Landsat 4/5 Collection 2 Level 1     |
-| `landsat_em_c2_l2`     | Landsat 4/5 Collection 2 Level 1     |
-| `landsat_etm_c2_l1`    | Landsat 7 Collection 2 Level 1       |
-| `landsat_etm_c2_l2`    | Landsat 7 Collection 2 Level 2       |
-| `landsat_ot_c2_l1`     | Landsat 8/9 Collection 2 Level 1     |
-| `landsat_ot_c2_l2`     | Landsat 8/9 Collection 2 Level 2     |
-| `landsat_ba_tile_c2`   | Landsat Burned Area Product          |
-| `landsat_dswe_tile_c2` | Landsat Dynamic Surface Water Extent |
-| `landsat_fsca_tile_c2` | Landsat Fractional Snow Covered Area |
-| `gmted2010`            | GMTED 2010 DEM                       |
-
 ## Known Limitations
+
+- The download program will only start the download of orders once all scenes are available. Thus, your order might not get downloaded
+immediately if only one scene is still being processed.
+- The geocoding/place search endpoint of USGS's API currently does not seem to work with non-US features. This may be a bug in the program.
 
 ## Documentation
 
