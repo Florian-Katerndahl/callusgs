@@ -18,6 +18,8 @@ from callusgs.utils import (
     downloadable_and_preparing_scenes,
     singular_download,
     get_user_rate_limits,
+    product_is_dem,
+    product_is_landsat,
 )
 from callusgs import ExitCodes
 
@@ -136,6 +138,12 @@ def download(args: Namespace):
         ),
     )
 
+    if product_is_dem(args.product):
+        # Reset parts of scene filter if DEM is requested
+        scene_filter.acquisitionFilter = None
+        scene_filter.cloudCoverFilter = None
+        scene_filter.seasonalFilter = None
+
     download_logger.info("Constructed scene filter")
 
     with Api(
@@ -162,7 +170,9 @@ def download(args: Namespace):
         # use scene-search to query scenes
         entities = []
         scene_search_results = ee_session.scene_search(
-            args.product, scene_filter=scene_filter
+            args.product,
+            scene_filter=scene_filter,
+            include_null_metadata=True if product_is_dem(args.product) else False,
         )
         initially_discovered_products = scene_search_results.data["totalHits"]
         download_logger.info(
@@ -188,7 +198,10 @@ def download(args: Namespace):
             start_num := scene_search_results.data["nextRecord"]
         ) != initially_discovered_products and start_num != 0:
             scene_search_results = ee_session.scene_search(
-                args.product, scene_filter=scene_filter, starting_number=start_num
+                args.product,
+                scene_filter=scene_filter,
+                starting_number=start_num,
+                include_null_metadata=True if product_is_dem(args.product) else False,
             )
             entities.extend(
                 search_result["entityId"]
@@ -220,9 +233,17 @@ def download(args: Namespace):
         total_size = 0
         for i in entity_download_options.data:
             # band files are marked as not available; but since I'm only interested in product bundles I don't care
-            if i["available"] and "Product Bundle" in i["productName"]:
+            if not i["available"]:
+                continue
+            if (
+                product_is_landsat(args.product)
+                and "Product Bundle" in i["productName"]
+            ) or (
+                product_is_dem(args.product) and args.dem_resolution in i["productName"]
+            ):
                 available_downloads.append((i["entityId"], i["id"]))
                 total_size += i["filesize"]
+
         downloads_to_request = [
             Types.DownloadInput(*i, None, download_label) for i in available_downloads
         ]
@@ -277,14 +298,21 @@ def download(args: Namespace):
         )
         for order in download_search_response.data:
             if (
-                "Product Bundle" in order["productName"]
+                (
+                    product_is_landsat(args.product)
+                    and "Product Bundle" in i["productName"]
+                )
+                or (
+                    product_is_dem(args.product)
+                    and args.dem_resolution in i["productName"]
+                )
                 and order["statusText"] == "Ordered"
             ):
                 download_logger.error(
-                "At least one scenes is in 'Ordered' status, only attempting complete orders. "
-                "Please try again later"
+                    "At least one scenes is in 'Ordered' status, only attempting complete orders. "
+                    "Please try again later"
                 )
-                exit(ExitCodes.E_ORDERINCOMPLETE)            
+                exit(ExitCodes.E_ORDERINCOMPLETE)
 
         ## use download-retrieve to retrieve products, regardless of their status (can be checked to if looping over requested downloads is needed)
         ueids = set()
@@ -299,7 +327,14 @@ def download(args: Namespace):
                 i
                 for i in retrieved_downloads.data["available"]
                 + retrieved_downloads.data["requested"]
-                if "Product Bundle" in i["productName"]
+                if (
+                    product_is_landsat(args.product)
+                    and "Product Bundle" in i["productName"]
+                )
+                or (
+                    product_is_dem(args.product)
+                    and args.dem_resolution in i["productName"]
+                )
             ]
         )
 
@@ -335,7 +370,14 @@ def download(args: Namespace):
                         i
                         for i in retrieved_downloads.data["available"]
                         + retrieved_downloads.data["requested"]
-                        if "Product Bundle" in i["productName"]
+                        if (
+                            product_is_landsat(args.product)
+                            and "Product Bundle" in i["productName"]
+                        )
+                        or (
+                            product_is_dem(args.product)
+                            and args.dem_resolution in i["productName"]
+                        )
                     ],
                     ueids,
                 )
@@ -373,8 +415,8 @@ def download(args: Namespace):
         ## and now delete the label (i.e. remove order from download queue)
         ee_session.download_order_remove(label=download_label)
         download_logger.info(f"Removed order {download_label}")
-    
-    return ExitCodes.E_OK
+
+    return ExitCodes.E_OK.value
 
 
 def geocode(args: Namespace):

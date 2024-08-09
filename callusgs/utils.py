@@ -2,6 +2,8 @@ from time import sleep
 from typing import Union, Tuple, List, Optional, Literal, Dict
 import logging
 from pathlib import Path
+import re
+
 import fiona
 
 from callusgs import Api
@@ -52,9 +54,9 @@ def ogr2internal(
 
         first_feature: fiona.Feature = next(iter(f))
         geometry_type: str = first_feature.geometry["type"]
-        coordinates: Union[Tuple[float], List[List[Tuple[float]]]] = first_feature.geometry[
-            "coordinates"
-        ]
+        coordinates: Union[Tuple[float], List[List[Tuple[float]]]] = (
+            first_feature.geometry["coordinates"]
+        )
         if geometry_type not in ["Point", "Polygon"]:
             raise RuntimeError(
                 f"Unsupported geometry type encountered: {geometry_type}, "
@@ -152,7 +154,7 @@ def singular_download(download_item: Dict, connection: Api, outdir: Path) -> Non
     :type outdir: Path
     :return: _description_
     :rtype: _type_
-    """    
+    """
     k, v = download_item
     try:
         connection.download(v["url"], outdir)
@@ -162,15 +164,40 @@ def singular_download(download_item: Dict, connection: Api, outdir: Path) -> Non
         utils_logger.error("Rate Limit reached")
         download_count, _, _ = get_user_rate_limits(connection)
         if download_count == 0:
-            utils_logger.error("Maximum number of downloads (15 000) reached for the past 15 minutes. "
-                               "Thread will sleep for 15 minutes before continuing with download requests.")
+            utils_logger.error(
+                "Maximum number of downloads (15 000) reached for the past 15 minutes. "
+                "Thread will sleep for 15 minutes before continuing with download requests."
+            )
             sleep(15 * SECONDS_PER_MINUTE)
     except RuntimeError as e:
         utils_logger.error(f"Failed to download {v['entityId']}: {e}")
-    
+
     return k
+
 
 def get_user_rate_limits(connection: Api) -> List[int]:
     rate_limit_results = connection.rate_limit_summary()
-    user_limits = [i for i in rate_limit_results.data["remainingLimits"] if i["limitType"] == "user"].pop()
-    return user_limits["recentDownloadCount"], user_limits["pendingDownloadCount"], user_limits["unattemptedDownloadCount"]
+    user_limits = [
+        i
+        for i in rate_limit_results.data["remainingLimits"]
+        if i["limitType"] == "user"
+    ].pop()
+    return (
+        user_limits["recentDownloadCount"],
+        user_limits["pendingDownloadCount"],
+        user_limits["unattemptedDownloadCount"],
+    )
+
+
+def product_is_dem(product: str) -> bool:
+    dem_pattern: re.Pattern = re.compile(r"^gmted2010")
+    if dem_pattern.search(product):
+        return True
+    return False
+
+
+def product_is_landsat(product: str) -> bool:
+    ls_pattern: re.Pattern = re.compile(r"^landsat")
+    if ls_pattern.search(product):
+        return True
+    return False

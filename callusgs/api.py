@@ -93,7 +93,7 @@ class Api:
         """
         self.last_request = datetime.now()
         r = requests.get(url, headers=self.headers, stream=stream, timeout=1200)
-        
+
         if r.status_code == 429:
             raise RateLimitEarthExplorerException
         else:
@@ -129,14 +129,17 @@ class Api:
         SECONDS_PER_HOUR: int = 3600
         if (
             self.login_timestamp is not None
-            and (datetime.now() - self.last_request).total_seconds() >= SECONDS_PER_HOUR * 2
+            and (datetime.now() - self.last_request).total_seconds()
+            >= SECONDS_PER_HOUR * 2
         ):
             if not self.relogin:
                 raise AuthenticationEarthExplorerException(
                     "Two hours have passed since the last request, api session token expired. Please login again!"
                 )
 
-            self.logger.warning("Maximum API conncetion time after inactivity reached. Trying to reconnect...")
+            self.logger.warning(
+                "Maximum API conncetion time after inactivity reached. Trying to reconnect..."
+            )
             match self.login_method:
                 case "token":
                     self.login_token(self.user, self.auth)
@@ -619,7 +622,9 @@ class Api:
         if result.data != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
 
-    def dataset_set_customizations(self, dataset_customization: DatasetCustomization) -> None:
+    def dataset_set_customizations(
+        self, dataset_customization: DatasetCustomization
+    ) -> None:
         """
         This method is used to create or update customizations for multiple datasets at once.
 
@@ -636,7 +641,9 @@ class Api:
         if result.data != 1:
             raise GeneralEarthExplorerException("Value of data section is not 1")
 
-    def download_complete_proxied(self, proxied_downloads: List[ProxiedDownload]) -> ApiResponse:
+    def download_complete_proxied(
+        self, proxied_downloads: List[ProxiedDownload]
+    ) -> ApiResponse:
         """
         Updates status to 'C' with total downloaded file size for completed proxied downloads.
 
@@ -672,7 +679,9 @@ class Api:
 
         return self._call_post("download-eula", data=post_payload)
 
-    def download_labels(self, download_application: Optional[str] = None) -> ApiResponse:
+    def download_labels(
+        self, download_application: Optional[str] = None
+    ) -> ApiResponse:
         # TODO 4
         """
         Gets a list of unique download labels associated with the orders.
@@ -1442,7 +1451,9 @@ class Api:
 
         _ = self._call_post("scene-list-remove", data=post_payload)
 
-    def scene_list_summary(self, list_id: str, dataset_name: Optional[str] = None) -> ApiResponse:
+    def scene_list_summary(
+        self, list_id: str, dataset_name: Optional[str] = None
+    ) -> ApiResponse:
         """
         Returns summary information for a given list.
 
@@ -1921,7 +1932,9 @@ class Api:
 
         return self._call_post("tram-order-details-clear", data=post_payload)
 
-    def tram_order_details_remove(self, order_number: str, detail_key: str) -> ApiResponse:
+    def tram_order_details_remove(
+        self, order_number: str, detail_key: str
+    ) -> ApiResponse:
         """
         This method is used to remove the metadata within an order.
 
@@ -1946,7 +1959,9 @@ class Api:
         max_results: Optional[int] = 25,
         system_id: Optional[str] = None,
         sort_asc: Optional[bool] = None,
-        sort_field: Optional[Literal["order_id", "date_entered", "date_updated"]] = None,
+        sort_field: Optional[
+            Literal["order_id", "date_entered", "date_updated"]
+        ] = None,
         status_filter: Optional[List[str]] = None,
     ) -> ApiResponse:
         """

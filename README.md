@@ -85,6 +85,14 @@ The snipped below queries the centroid coordinates for three points in the WRS2 
 callusgs grid2ll --response-shape point 52,11 32,5 89,69
 ```
 
+#### Clean
+
+The `clean` subprogram is used to delete dangeling product/scene orders.
+
+```bash
+callusgs -v clean
+```
+
 ## Features
 
 `callusgs` is both a python package and a suite of command line tools.
@@ -102,12 +110,9 @@ Currently supported products for download are:
 | `landsat_ba_tile_c2`   | Landsat Burned Area Product          |
 | `landsat_dswe_tile_c2` | Landsat Dynamic Surface Water Extent |
 | `landsat_fsca_tile_c2` | Landsat Fractional Snow Covered Area |
-<!-- | `gmted2010@7.5`        | GMTED 2010 DEM at 7.5 arc seconds    | -->
-<!-- | `gmted2010@15`         | GMTED 2010 DEM at 15 arc seconds     | -->
-<!-- | `gmted2010@30`         | GMTED 2010 DEM at 30 arc seconds     | -->
+| `gmted2010`            | GMTED 2010 DEM at 7.5 arc seconds    |
 
 ## Known Limitations
-
 
 ## Documentation
 

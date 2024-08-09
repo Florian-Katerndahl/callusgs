@@ -112,7 +112,9 @@ class TemplateConfiguration(EarthExplorerBaseType):
 
 
 class GeoJson(EarthExplorerBaseType):
-    def __init__(self, type: str, coordinates: Union[List[float], List[List[List[float]]]]) -> None:
+    def __init__(
+        self, type: str, coordinates: Union[List[float], List[List[List[float]]]]
+    ) -> None:
         """
         GeoJson data type
 
@@ -122,7 +124,7 @@ class GeoJson(EarthExplorerBaseType):
 
         .. warning:: In contrast to the documentation, coordinates must be an array
             of floats (coordinate pairs) and not instances of Coordinate object!
-        
+
         .. warning:: GeoJson expects coordinate pairs to be longitude, latidue!
 
         :param type: Geometry types supported by GeoJson, like polygon
@@ -243,7 +245,9 @@ class MetadataOr(EarthExplorerBaseType):
 
 
 class MetadataValue(EarthExplorerBaseType):
-    def __init__(self, filter_type: str, filter_id: str, value: str, operand: str) -> None:
+    def __init__(
+        self, filter_type: str, filter_id: str, value: str, operand: str
+    ) -> None:
         """
         Metadata Value data type
 
@@ -507,7 +511,9 @@ class DownloadResponse(EarthExplorerBaseType):
 
 
 class DownloadInput(EarthExplorerBaseType):
-    def __init__(self, entity_id: str, product_id: str, data_use: str, label: str) -> None:
+    def __init__(
+        self, entity_id: str, product_id: str, data_use: str, label: str
+    ) -> None:
         """
         Download Input data type
 
@@ -589,7 +595,9 @@ class DownloadQueueDownload(EarthExplorerBaseType):
 
 
 class Eula(EarthExplorerBaseType):
-    def __init__(self, eula_code: Optional[str], agreement_content: Optional[str]) -> None:
+    def __init__(
+        self, eula_code: Optional[str], agreement_content: Optional[str]
+    ) -> None:
         """
         Eula data type
 
@@ -606,7 +614,12 @@ class Eula(EarthExplorerBaseType):
 
 class FilegroupDownload(EarthExplorerBaseType):
     def __init__(
-        self, dataset_name: str, file_groups: List[str], list_id: str, data_use: str, label: str
+        self,
+        dataset_name: str,
+        file_groups: List[str],
+        list_id: str,
+        data_use: str,
+        label: str,
     ) -> None:
         """
         Filegroup Download data type
@@ -633,7 +646,12 @@ class FilegroupDownload(EarthExplorerBaseType):
 
 class FilepathDownload(EarthExplorerBaseType):
     def __init__(
-        self, dataset_name: str, product_code: str, data_path: str, data_use: str, label: str
+        self,
+        dataset_name: str,
+        product_code: str,
+        data_path: str,
+        data_use: str,
+        label: str,
     ) -> None:
         """
         Filepath Download
@@ -659,7 +677,9 @@ class FilepathDownload(EarthExplorerBaseType):
 
 
 class Options(EarthExplorerBaseType):
-    def __init__(self, bulk: bool, order: bool, download: bool, secondary: bool) -> None:
+    def __init__(
+        self, bulk: bool, order: bool, download: bool, secondary: bool
+    ) -> None:
         """
         Options data type
 
@@ -792,7 +812,9 @@ class MetadataExport(EarthExplorerBaseType):
 
 
 class MetadataField(EarthExplorerBaseType):
-    def __init__(self, _id: int, field_name: str, dictionary_link: str, value: str) -> None:
+    def __init__(
+        self, _id: int, field_name: str, dictionary_link: str, value: str
+    ) -> None:
         """
         Metadata Field data type
 

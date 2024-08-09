@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ExitCodes(Enum):
     E_OK = 0
     E_ORDERINCOMPLETE = 1

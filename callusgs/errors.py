@@ -67,7 +67,10 @@ class ErrorCodes:
             "msg": "API not configured to handle the request - full details in error message",
             "cls": GeneralEarthExplorerException,
         },
-        "VERSION_UNKNOWN": {"msg": "Unknown version used", "cls": GeneralEarthExplorerException},
+        "VERSION_UNKNOWN": {
+            "msg": "Unknown version used",
+            "cls": GeneralEarthExplorerException,
+        },
         "AUTH_INVALID": {
             "msg": "User credential verification failed",
             "cls": AuthenticationEarthExplorerException,
@@ -76,7 +79,10 @@ class ErrorCodes:
             "msg": "User account does not have access to the requested endpoint",
             "cls": AuthenticationEarthExplorerException,
         },
-        "AUTH_KEY_INVALID": {"msg": "Invalid API Key", "cls": AuthenticationEarthExplorerException},
+        "AUTH_KEY_INVALID": {
+            "msg": "Invalid API Key",
+            "cls": AuthenticationEarthExplorerException,
+        },
         "RATE_LIMIT": {
             "msg": "User attempted to run multiple requests at a time",
             "cls": RateLimitEarthExplorerException,
@@ -105,7 +111,10 @@ class ErrorCodes:
             "msg": "Dataset is not available for the user - full details in error message",
             "cls": InventoryEarthExplorerException,
         },
-        "DATASET_INVALID": {"msg": "Invalid dataset used", "cls": InventoryEarthExplorerException},
+        "DATASET_INVALID": {
+            "msg": "Invalid dataset used",
+            "cls": InventoryEarthExplorerException,
+        },
         "DATASET_CUSTOM_CLEAR_ERROR": {
             "msg": "Unable to clear dataset customization",
             "cls": InventoryEarthExplorerException,
@@ -138,7 +147,10 @@ class ErrorCodes:
             "msg": "Unable to execute search request",
             "cls": InventoryEarthExplorerException,
         },
-        "SEARCH_FAILED": {"msg": "Search failed", "cls": InventoryEarthExplorerException},
+        "SEARCH_FAILED": {
+            "msg": "Search failed",
+            "cls": InventoryEarthExplorerException,
+        },
         "SEARCH_RESULT_ERROR": {
             "msg": "Unable to translate results into response format",
             "cls": InventoryEarthExplorerException,
@@ -159,7 +171,10 @@ class ErrorCodes:
             "msg": "Order does not belong to the user",
             "cls": OrderEarthExplorerException,
         },
-        "ORDER_INVALID": {"msg": "Invalid order given", "cls": OrderEarthExplorerException},
+        "ORDER_INVALID": {
+            "msg": "Invalid order given",
+            "cls": OrderEarthExplorerException,
+        },
         "RESTORE_ORDER_ERROR": {
             "msg": "Unable to restore order units - full details in error message",
             "cls": OrderEarthExplorerException,
@@ -175,4 +190,6 @@ class ErrorCodes:
     }
 
     def __call__(self, code: str) -> None:
-        return ErrorCodes.KNOWN_ERROR_CODES[code]["cls"](ErrorCodes.KNOWN_ERROR_CODES[code]["msg"])
+        return ErrorCodes.KNOWN_ERROR_CODES[code]["cls"](
+            ErrorCodes.KNOWN_ERROR_CODES[code]["msg"]
+        )

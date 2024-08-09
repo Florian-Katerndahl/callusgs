@@ -16,7 +16,11 @@ def main() -> int:
     :return: status code
     :rtype: int
     """
-    parent_parser = ArgumentParser(prog="callusgs", formatter_class=ArgumentDefaultsHelpFormatter, epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>")
+    parent_parser = ArgumentParser(
+        prog="callusgs",
+        formatter_class=ArgumentDefaultsHelpFormatter,
+        epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>",
+    )
     parent_parser.add_argument(
         "--auth-method",
         type=str,
@@ -54,11 +58,17 @@ def main() -> int:
         action="store_true",
         help="Print even more logging messages (DEBUG level and above)",
     )
-    parent_parser.add_argument("-d", "--dry-run", action="store_true", help="Do not perform action")
+    parent_parser.add_argument(
+        "-d", "--dry-run", action="store_true", help="Do not perform action"
+    )
 
     subparsers = parent_parser.add_subparsers(required=True)
 
-    report_parser = subparsers.add_parser("report", help="Report help", epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>")
+    report_parser = subparsers.add_parser(
+        "report",
+        help="Report help",
+        epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>",
+    )
     report_parser.set_defaults(func=exit)
 
     download_parser = subparsers.add_parser(
@@ -150,9 +160,7 @@ def main() -> int:
             "landsat_ba_tile_c2",
             "landsat_dswe_tile_c2",
             "landsat_fsca_tile_c2",
-            "gmted2010@7.5",
-            "gmted2010@15",
-            "gmted2010@30",
+            "gmted2010",
         ],
         required=True,
         help="Data product to query. Mapping is: landsat_em_c2_l1 => "
@@ -165,9 +173,14 @@ def main() -> int:
         "landsat_ba_tile_c2 => Landsat Burned Area Product, "
         "landsat_dswe_tile_c2 => Landsat Dynamic Surface Water Extent, "
         "landsat_fsca_tile_c2 => Landsat Fractional Snow Covered Area, "
-        "gmted2010@7.5 => GMTED 2010 DEM at 7.5 arc sec, "
-        "gmted2010@15 => GMTED 2010 DEM at 15 arc sec, "
-        "gmted2010@30 => GMTED 2010 DEM at 30 arc sec",
+        "gmted2010 => GMTED 2010 DEM",
+    )
+    download_parser.add_argument(
+        "--dem-resolution",
+        type=str,
+        choices=["7.5", "15", "30"],
+        default="7.5",
+        help="Resoltuion for Digital Elevation Model",
     )
     download_parser.add_argument(
         "outdir",
@@ -219,10 +232,11 @@ def main() -> int:
     )
     grid2ll_parser.add_argument(
         "coordinates",
-        type=str, 
+        type=str,
         nargs="+",
         help="The xy coordinate pairs in the grid system. "
-             "Coordinate pairs must be given as X1,Y1 X2,Y2 ...")
+        "Coordinate pairs must be given as X1,Y1 X2,Y2 ...",
+    )
 
     clean_parser = subparsers.add_parser(
         "clean",
