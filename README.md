@@ -110,7 +110,7 @@ Currently supported products for download are:
 | `landsat_ba_tile_c2`   | Landsat Burned Area Product          |
 | `landsat_dswe_tile_c2` | Landsat Dynamic Surface Water Extent |
 | `landsat_fsca_tile_c2` | Landsat Fractional Snow Covered Area |
-| `gmted2010`            | GMTED 2010 DEM at 7.5 arc seconds    |
+| `gmted2010`            | GMTED 2010 DEM                       |
 
 ## Known Limitations
 
