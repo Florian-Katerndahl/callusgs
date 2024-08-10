@@ -5,11 +5,5 @@ CLI Tools
 
 ``callusgs`` provides four command-line interface tools detailed below.
 
-callusgs
-------------
-
-.. argparse::
-    :filename: callusgs/cli.py
-    :func: parent_parser
+.. autoprogram:: callusgs.cli:parent_parser
     :prog: callusgs
-    :noepilog: true

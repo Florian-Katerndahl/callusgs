@@ -16,7 +16,7 @@ author = 'Florian Katerndahl'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
-    'sphinxarg.ext'
+    'sphinxcontrib.autoprogram'
 ]
 
 templates_path = ['_templates']
