@@ -3,23 +3,13 @@
 CLI Tools
 =========
 
-General API Tools
------------------
+``callusgs`` provides four command-line interface tools detailed below.
 
-Search
-^^^^^^
+callusgs
+------------
 
-Download
-^^^^^^^^
-
-Geocoding
-^^^^^^^^^
-
-WRS1/WRS2 to and from coordinates
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Product Specific API Tools
---------------------------
-
-Landsat Collection 2 Level 2
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. argparse::
+    :filename: callusgs/cli.py
+    :func: parent_parser
+    :prog: callusgs
+    :noepilog: true
