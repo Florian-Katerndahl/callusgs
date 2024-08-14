@@ -1,6 +1,7 @@
 # callusgs
 
 [![Documentation Status](https://readthedocs.org/projects/callusgs/badge/?version=latest)](https://callusgs.readthedocs.io/en/latest/?badge=latest)
+[![DOI](https://zenodo.org/badge/812636568.svg)](https://zenodo.org/doi/10.5281/zenodo.13319174)
 
 `callusgs` aims to be a complete and (mostly) typed implementation of USGS's machine-to-machine API (v1.5.0).
 In addition, `callusgs` provides a suite of command line tools that can be used to query and download scenes, 
