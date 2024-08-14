@@ -1,5 +1,7 @@
 # callusgs
 
+[![Documentation Status](https://readthedocs.org/projects/callusgs/badge/?version=latest)](https://callusgs.readthedocs.io/en/latest/?badge=latest)
+
 `callusgs` aims to be a complete and (mostly) typed implementation of USGS's machine-to-machine API (v1.5.0).
 In addition, `callusgs` provides a suite of command line tools that can be used to query and download scenes, 
 use the geocoding service provided by the USGSS and convert WRS 1/2 *coordinates* to geographic coordinates.
