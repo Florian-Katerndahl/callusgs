@@ -10,8 +10,11 @@ type: software
 authors:
   - given-names: Florian
     family-names: Katerndahl
-    orcid: https://orcid.org/0000-0001-6137-061X
+    orcid: 'https://orcid.org/0000-0001-6137-061X'
     email: florian@katerndahl.com
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.13319174
 repository-code: 'https://github.com/Florian-Katerndahl/callusgs'
 abstract: >-
   callusgs Aims To Be A Complete Implementation Of USGS's
@@ -28,3 +31,5 @@ keywords:
   - download
   - earthexplorer
 license: GPL-2.0
+version: v0.1.2
+date-released: '2024-08-14'

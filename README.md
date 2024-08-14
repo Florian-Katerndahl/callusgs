@@ -141,8 +141,11 @@ If you use this software, please use the bibtex entry below or refer to [the cit
 ```tex
 @software{Katerndahl2024,
 author = {Katerndahl, Florian},
+doi = {10.5281/zenodo.13319174},
+month = {8},
 title = {callusgs},
-url = {https://github.com/Florian-Katerndahl/callusgs}
+url = {https://github.com/Florian-Katerndahl/callusgs},
+year = {2024}
 }
 ```
 
