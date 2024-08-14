@@ -24,7 +24,6 @@ Home
    chapters/setup.rst
    User Guide <chapters/user_guide.rst>
    CLI Tools <chapters/cli.rst>
-   chapters/cookbook.rst
    API Documentation <chapters/modules.rst>
 
 

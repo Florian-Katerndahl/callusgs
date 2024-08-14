@@ -1,4 +1,0 @@
-.. _cookbook:
-
-Cookbook
-========
