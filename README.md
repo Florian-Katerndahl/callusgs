@@ -21,7 +21,7 @@ Currently supported products for download are:
 |   **Product string**   |           **Prodcut Name**           |
 |:----------------------:|:------------------------------------:|
 | `landsat_em_c2_l1`     | Landsat 4/5 Collection 2 Level 1     |
-| `landsat_em_c2_l2`     | Landsat 4/5 Collection 2 Level 1     |
+| `landsat_em_c2_l2`     | Landsat 4/5 Collection 2 Level 2     |
 | `landsat_etm_c2_l1`    | Landsat 7 Collection 2 Level 1       |
 | `landsat_etm_c2_l2`    | Landsat 7 Collection 2 Level 2       |
 | `landsat_ot_c2_l1`     | Landsat 8/9 Collection 2 Level 1     |
@@ -142,6 +142,7 @@ If you use this software, please use the bibtex entry below or refer to [the cit
 @software{Katerndahl2024,
 author = {Katerndahl, Florian},
 doi = {10.5281/zenodo.13319174},
+version = {v0.1.2},
 month = {8},
 title = {callusgs},
 url = {https://github.com/Florian-Katerndahl/callusgs},
