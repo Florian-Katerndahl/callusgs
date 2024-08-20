@@ -168,11 +168,12 @@ def download(args: Namespace):
                 "Did you request access to the M2M API from your ERS profile at 'https://ers.cr.usgs.gov/profile/access'?"
             )
         
-        dataset_metadata = ee_session.dataset(dataset_name=args.product)
-        download_logger.info(
-            f"Request {dataset_metadata.request_id} in session {dataset_metadata.session_id}: Got DOI"
-        )
-        print(f"\n\n{get_citation(dataset_metadata.data["doiNumber"].strip())}\n")
+        if not args.no_cite:
+            dataset_metadata = ee_session.dataset(dataset_name=args.product)
+            download_logger.info(
+                f"Request {dataset_metadata.request_id} in session {dataset_metadata.session_id}: Got DOI"
+            )
+            print(f"\n{get_citation(dataset_metadata.data["doiNumber"].strip())}")
 
         # use scene-search to query scenes
         entities = []

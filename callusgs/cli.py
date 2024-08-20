@@ -72,6 +72,11 @@ download_parser = subparsers.add_parser(
 )
 download_parser.set_defaults(func=download)
 download_parser.add_argument(
+    "--no-cite",
+    action="store_true",
+    help="Suppress citation output"
+)
+download_parser.add_argument(
     "--cloudcover",
     type=int,
     nargs=2,
