@@ -20,6 +20,7 @@ from callusgs.utils import (
     get_user_rate_limits,
     product_is_dem,
     product_is_landsat,
+    get_citation
 )
 from callusgs import ExitCodes
 
@@ -166,6 +167,12 @@ def download(args: Namespace):
                 "Either 'order' or 'downlaod' permission not present for user. "
                 "Did you request access to the M2M API from your ERS profile at 'https://ers.cr.usgs.gov/profile/access'?"
             )
+        
+        dataset_metadata = ee_session.dataset(dataset_name=args.product)
+        download_logger.info(
+            f"Request {dataset_metadata.request_id} in session {dataset_metadata.session_id}: Got DOI"
+        )
+        download_logger.info(f"\n\n{get_citation(dataset_metadata.data["doiNumber"].strip())}\n")
 
         # use scene-search to query scenes
         entities = []
@@ -181,13 +188,13 @@ def download(args: Namespace):
 
         if initially_discovered_products == 0:
             download_logger.warning("Found no scenes")
-            exit(ExitCodes.E_OK)
+            exit(ExitCodes.E_OK.value)
         elif initially_discovered_products > 20_000:
             download_logger.warning(
                 "Found more than 20 000 scenes. The maximun number of scenes to request is 20 000. "
                 "Please choose a narrower query (e.g. shorter time frame or more stringent cloud cover)."
             )
-            exit(ExitCodes.E_LARGEORDER)
+            exit(ExitCodes.E_LARGEORDER.value)
 
         entities.extend(
             search_result["entityId"]
@@ -258,7 +265,7 @@ def download(args: Namespace):
             ## and now delete the label (i.e. remove order from download queue)
             ee_session.download_order_remove(label=download_label)
             download_logger.debug(f"Removed order {download_label}")
-            exit(ExitCodes.E_OK)
+            exit(ExitCodes.E_OK.value)
 
         _, pending_download_limit, unattempted_download_limit = get_user_rate_limits(
             ee_session
@@ -287,7 +294,7 @@ def download(args: Namespace):
         ):
             download_logger.error("Order failed due to unknown error. Aborting.")
             download_logger.debug(json.dumps(requested_downloads.data, indent=2))
-            exit(ExitCodes.E_UNKNOWN)
+            exit(ExitCodes.E_UNKNOWN.value)
 
         ## check if all scenes are in ordered status. If so, exit the program
         download_search_response = ee_session.download_search(
@@ -354,7 +361,7 @@ def download(args: Namespace):
                     "Please re-start the query with tighter search bounds (e.g. shorter date range)."
                     "In case this error persists, clean your download queue via `callusgs clean`."
                 )
-                exit(ExitCodes.E_RATELIMIT)
+                exit(ExitCodes.E_RATELIMIT.value)
 
             download_logger.info(
                 "Did not get all downloads, trying again in 30 seconds"

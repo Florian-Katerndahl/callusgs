@@ -3,6 +3,7 @@ from typing import Union, Tuple, List, Optional, Literal, Dict
 import logging
 from pathlib import Path
 import re
+import requests
 
 import fiona
 
@@ -201,3 +202,9 @@ def product_is_landsat(product: str) -> bool:
     if ls_pattern.search(product):
         return True
     return False
+
+def get_citation(dataset_doi: str) -> str:
+    bib_response = requests.get(dataset_doi, headers={"Accept": "application/x-bibtex"})
+    bib_response.encoding = "utf-8"
+
+    return bib_response.text
