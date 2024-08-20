@@ -172,7 +172,7 @@ def download(args: Namespace):
         download_logger.info(
             f"Request {dataset_metadata.request_id} in session {dataset_metadata.session_id}: Got DOI"
         )
-        download_logger.info(f"\n\n{get_citation(dataset_metadata.data["doiNumber"].strip())}\n")
+        print(f"\n\n{get_citation(dataset_metadata.data["doiNumber"].strip())}\n")
 
         # use scene-search to query scenes
         entities = []
