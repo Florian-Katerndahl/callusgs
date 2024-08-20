@@ -1,7 +1,7 @@
 # callusgs
 
 [![Documentation Status](https://readthedocs.org/projects/callusgs/badge/?version=latest)](https://callusgs.readthedocs.io/en/latest/?badge=latest)
-[![DOI](https://zenodo.org/badge/812636568.svg)](https://zenodo.org/doi/10.5281/zenodo.13319174)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13351646.svg)](https://doi.org/10.5281/zenodo.13351646)
 
 `callusgs` aims to be a complete and (mostly) typed implementation of USGS's machine-to-machine API (v1.5.0).
 In addition, `callusgs` provides a suite of command line tools that can be used to query and download scenes, 
@@ -141,8 +141,8 @@ If you use this software, please use the bibtex entry below or refer to [the cit
 ```tex
 @software{Katerndahl2024,
 author = {Katerndahl, Florian},
-doi = {10.5281/zenodo.13319174},
-version = {v0.1.2},
+doi = {10.5281/zenodo.13351646},
+version = {v0.1.3},
 month = {8},
 title = {callusgs},
 url = {https://github.com/Florian-Katerndahl/callusgs},

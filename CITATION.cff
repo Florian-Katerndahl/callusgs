@@ -14,7 +14,7 @@ authors:
     email: florian@katerndahl.com
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.13319174
+    value: 10.5281/zenodo.13351646
 repository-code: 'https://github.com/Florian-Katerndahl/callusgs'
 abstract: >-
   callusgs Aims To Be A Complete Implementation Of USGS's
@@ -31,5 +31,5 @@ keywords:
   - download
   - earthexplorer
 license: GPL-2.0
-version: v0.1.2
-date-released: '2024-08-14'
+version: v0.1.3
+date-released: '2024-08-20'
