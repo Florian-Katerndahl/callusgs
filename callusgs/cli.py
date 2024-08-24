@@ -160,17 +160,8 @@ download_parser.add_argument(
         "gmted2010",
     ],
     required=True,
-    help="Data product to query. Mapping is: landsat_em_c2_l1 => "
-    "Landsat 4/5 Collection 2 Level 1, "
-    "landsat_em_c2_l2 => Landsat 4/5 Collection 2 Level 2, "
-    "landsat_etm_c2_l1 => Landsat 7 Collection 2 Level 1, "
-    "landsat_etm_c2_l2 => Landsat 7 Collection 2 Level 2, "
-    "landsat_ot_c2_l1 => Landsat 8/9 Collection 2 Level 1, "
-    "landsat_ot_c2_l2 => Landsat 8/9 Collection 2 Level 2, "
-    "landsat_ba_tile_c2 => Landsat Burned Area Product, "
-    "landsat_dswe_tile_c2 => Landsat Dynamic Surface Water Extent, "
-    "landsat_fsca_tile_c2 => Landsat Fractional Snow Covered Area, "
-    "gmted2010 => GMTED 2010 DEM",
+    help="Data product to query. For product name 'translations', "
+    "refer to the documentation."
 )
 download_parser.add_argument(
     "--dem-resolution",
