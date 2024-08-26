@@ -682,7 +682,6 @@ class Api:
     def download_labels(
         self, download_application: Optional[str] = None
     ) -> ApiResponse:
-        # TODO 4
         """
         Gets a list of unique download labels associated with the orders.
 
