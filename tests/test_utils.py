@@ -94,7 +94,7 @@ class TestUtils:
         [
             "https://doi.org/10.5281/zenodo.13319174",
             "https://doi.org/10.5066/P9OGBGM6",
-            "http://doi.org/10.5066/P9C7I13B",
+            "https://doi.org/10.5066/P9C7I13B",
             "https://doi.org/10.5066/P9IAXOVV",
         ],
     )
