@@ -97,6 +97,7 @@ callusgs -vv --dry-run download --product landsat_etm_c2_l1 \
 The USGS supplies a simplistic geocoding/POI-search endpoint which can be queries using the `geocode` sub-program.
 The snippet below queries all U.S. features whos placename attribute matches "New York".
 
+> [!WARNING]
 > Right now, the `placename` endpoint, which is called under the hood, does not return any results for features of type "world"!
 
 ```bash
