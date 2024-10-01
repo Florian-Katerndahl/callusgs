@@ -52,7 +52,7 @@ For more detailed usage instructions and/or examples, please refer to the [docum
 ### Prerequisites
 
 To fully use the package's/the API's functionality you need (1) an account at USGS and (2) access to M2M MACHINE role.
-While the first one is mandatory, the functionality without access to the M2M MACHINE role is restricted.
+While the first one is mandatory, the **functionality without access to the M2M MACHINE role is restricted (see table below)**.
 The account credentials need to be passed to the command line tools via CLI arguments or by setting the environment variables
 `USGS_USERNAME` and `USGS_AUTH`.
 
