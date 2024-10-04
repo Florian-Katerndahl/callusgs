@@ -15,6 +15,17 @@
 Home
 ====
 
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.13351646.svg
+  :target: https://doi.org/10.5281/zenodo.13351646
+
+.. image:: https://readthedocs.org/projects/callusgs/badge/?version=latest
+    :target: https://callusgs.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
+.. image:: https://fairsoftwarechecklist.net/badge.svg
+   :target: https://fairsoftwarechecklist.net/v0.2?f=31&a=32112&i=31101&r=133
+   :alt: FAIR checklist badge
+
 .. is setup a good name? is user guide better? I don't know..; maybe Api Access should be a section within User Guide and/or setuo
 .. toctree::
    :maxdepth: 2
