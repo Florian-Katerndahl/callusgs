@@ -16,11 +16,13 @@ Home
 ====
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.13351646.svg
-  :target: https://doi.org/10.5281/zenodo.13351646
+   :target: https://doi.org/10.5281/zenodo.13351646
+   :alt: Package's DOI
+
 
 .. image:: https://readthedocs.org/projects/callusgs/badge/?version=latest
-    :target: https://callusgs.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
+   :target: https://callusgs.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
 
 .. image:: https://fairsoftwarechecklist.net/badge.svg
    :target: https://fairsoftwarechecklist.net/v0.2?f=31&a=32112&i=31101&r=133
