@@ -70,14 +70,14 @@ The account credentials need to be passed to the command line tools via CLI argu
 
 #### Download
 
+> [!NOTE]
+> When supplying coordinates on the command line as is shown below, you need to end the coordinate string with two dashes (`--`).
+> This stops the program from trying to parse any further arguments. In turn, this also means the AOI must be given as the last argument!
+
 The snippet below queries the EarthExplorer catalogue for Landsat 8/9 Collection 2 Level 2 scenes between June 1st, 2020 and
 July 25th, 2024 for a small part of the southwest of Berlin, Germany. Additionally, only scenes for August and September are 
 returned and they must have a cloudcover of no more than 15%. Results are stored in a directory called `download`. The user 
 set the logging level to `INFO` with the `-v` flag.
-
-> [!NOTE]
-> When supplying coordinates on the command line as is shown below, you need to end the coordinate string with two dashes (`--`).
-> This stops the program from trying to parse any further arguments. In turn, this also means the AOI must be given as the last argument!
 
 ```bash
 callusgs -v download --product landsat_etm_c2_l2 \
@@ -90,10 +90,6 @@ January 1st, 2020 for Lima, Peru, and its surrounding region. For the given poly
 No further restrictions regarding the obervation months or cloudcouver are posed. Results **would be** stored in a directory called `download`,
 but as a dry run is requested, only the number of available scenes and their download size is reported. The user requested extended debug output with
 the `-vv` flag.
-
-> [!NOTE]
-> When supplying coordinates on the command line as is shown below, you need to end the coordinate string with two dashes (`--`).
-> This stops the program from trying to parse any further arguments. In turn, this also means the AOI must be given as the last argument!
 
 ```bash
 callusgs -vv --dry-run download --product landsat_etm_c2_l1 \
