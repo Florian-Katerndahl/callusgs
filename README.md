@@ -2,7 +2,7 @@
 
 [![Documentation Status](https://readthedocs.org/projects/callusgs/badge/?version=latest)](https://callusgs.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13351646.svg)](https://doi.org/10.5281/zenodo.13351646)
-[![FAIR checklist badge](https://fairsoftwarechecklist.net/badge.svg)](https://fairsoftwarechecklist.net/v0.2?f=31&a=32112&i=31101&r=133)
+[![FAIR checklist badge](https://fairsoftwarechecklist.net/badge.svg)](https://fairsoftwarechecklist.net/v0.2?f=31&a=32113&i=32101&r=133)
 
 
 `callusgs` aims to be a complete and (mostly) typed implementation of USGS's machine-to-machine API (v1.5.0).

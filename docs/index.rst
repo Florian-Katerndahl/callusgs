@@ -25,7 +25,7 @@ Home
    :alt: Documentation Status
 
 .. image:: https://fairsoftwarechecklist.net/badge.svg
-   :target: https://fairsoftwarechecklist.net/v0.2?f=31&a=32112&i=31101&r=133
+   :target: https://fairsoftwarechecklist.net/v0.2?f=31&a=32113&i=32101&r=133
    :alt: FAIR checklist badge
 
 .. is setup a good name? is user guide better? I don't know..; maybe Api Access should be a section within User Guide and/or setuo
