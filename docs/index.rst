@@ -105,6 +105,29 @@ Alternatively, if you're only interested in the CLI functionality of this tool t
 
    pipx install callusgs
 
+Citation
+--------
+
+If you're using ``callusgs`` in your work, please cite it according to the `CITATION file <https://github.com/Florian-Katerndahl/callusgs/blob/main/CITATION.cff>`_.
+A ready-to-use bibtex entry is listed below.
+
+.. include:: ../CITATION.cff
+   :code: json
+   :literal:
+   :number-lines: 1
+
+.. code-block:: bibtex
+
+   @software{Katerndahl2024,
+      author = {Katerndahl, Florian},
+      doi = {10.5281/zenodo.13351646},
+      version = {v0.1.3},
+      month = {8},
+      title = {callusgs},
+      url = {https://github.com/Florian-Katerndahl/callusgs},
+      year = {2024}
+   }
+
 .. Indices and tables
 .. ==================
 

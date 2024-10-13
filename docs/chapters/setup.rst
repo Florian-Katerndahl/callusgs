@@ -12,12 +12,11 @@ Installation
 
     pip install callusgs
 
-Alternatively, clone this repository and run ``poetry install`` to create a new virtual environment from which the package and programs are accessible.
+Alternatively, if you're only interested in the CLI functionality of this tool the best choice is probably to use `pipx <https://github.com/pypa/pipx>`_ for installation.
 
-Installing Extras
-^^^^^^^^^^^^^^^^^
+.. code-block:: bash
 
-*To be filled*
+   pipx install callusgs
 
 EROS/USGS Account
 -----------------
