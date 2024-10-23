@@ -10,6 +10,7 @@ import logging
 import os
 from urllib.parse import unquote
 import warnings
+from warnings import deprecated
 import requests
 from tqdm import tqdm
 
@@ -1018,6 +1019,7 @@ class Api:
 
         return self._call_post("grid2ll", data=post_payload)
 
+    @deprecated("As of Feburary 2025, the API login via password is no longer supported.")
     def login(self, username: str, password: str, user_context: Any = None):
         """
         Upon a successful login, an API key will be returned. This key will be active for two
