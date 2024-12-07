@@ -139,7 +139,9 @@ See the docs folder for raw documentation or visit [callusgs.readthedocs.io](htt
 
 ## License
 
-- `callusgs` is licensed under the [GPL-v2](LICENSE)
+`callusgs` is licensed under the [GPL-v2](LICENSE). You may copy, distribute and modify the software as long as you track changes/dates in source files. Any modifications to or software including (via compiler) GPL-licensed code must also be made available under the GPL along with build & install instructions[^1].
+
+[^1]: Synopsis taken from [tk;drLegal](https://www.tldrlegal.com/license/gnu-general-public-license-v2).
 
 ## Citation
 
