@@ -11,12 +11,12 @@ from typing import Optional, Dict, List, Union, Tuple, Any
 
 api_logger = logging.getLogger("callusgs.persistent")
 
+NO_CONNECTION_WARNING: str = "No connection to database established"
 
 class PersistentMetadata:
     """
     Class to handle and store metadata from landsat images
     """
-
     TABLE_NAME: str = "callusgs"
     FIELDS_DICT: Dict[str, Union[str, float]] = {
         "Landsat Product Identifier L2": "landsat-product-identifier-l2",
@@ -201,7 +201,7 @@ class PersistentMetadata:
         :param link: Download link to resource
         :type link: str
         """
-        assert self.__connection_established(), "No connection to database established"
+        assert self.__connection_established(), NO_CONNECTION_WARNING
 
         db_data = self.__usgs_metadata_to_dict(data)
         db_data.update({"link": link, "download_successful": False})
@@ -280,7 +280,7 @@ class PersistentMetadata:
         :return: _description_
         :rtype: List[Tuple[str]]
         """
-        assert self.__connection_established(), "No connection to database established"
+        assert self.__connection_established(), NO_CONNECTION_WARNING
 
         res = self.cursor.execute(
             """
@@ -304,7 +304,7 @@ class PersistentMetadata:
         :return: All database row that were returned according to ``query_string``
         :rtype: Union[List[Tuple[Any]], List]
         """
-        assert self.__connection_established(), "No connection to database established"
+        assert self.__connection_established(), NO_CONNECTION_WARNING
 
         if placeholders is None:
             res = self.cursor.execute(query_string)
@@ -336,11 +336,20 @@ class PersistentMetadata:
         :param scene_identifier: Scene to update
         :type scene_identifier: str
         """
-        assert self.__connection_established(), "No connection to database established"
+        assert self.__connection_established(), NO_CONNECTION_WARNING
 
         self.cursor.execute(
             "UPDATE callusgs SET download_successful = TRUE WHERE landsat_scene_identifier = ?;",
             (scene_identifier,),
+        )
+        self.connection.commit()
+
+    def set_download_link(self, link: str, scene_identifier: str) -> None:
+        assert self.__connection_established(), NO_CONNECTION_WARNING
+        
+        self.cursor.execute(
+            "UPDATE callusgs set link = ? WHERE landsat_scene_identifier = ?;",
+            (link, scene_identifier)
         )
         self.connection.commit()
 
