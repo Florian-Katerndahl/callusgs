@@ -10,7 +10,6 @@ import logging
 import os
 from urllib.parse import unquote
 import warnings
-from warnings import deprecated
 import requests
 from tqdm import tqdm
 
@@ -1019,7 +1018,6 @@ class Api:
 
         return self._call_post("grid2ll", data=post_payload)
 
-    @deprecated("As of Feburary 2025, the API login via password is no longer supported.")
     def login(self, username: str, password: str, user_context: Any = None):
         """
         Upon a successful login, an API key will be returned. This key will be active for two
@@ -1037,19 +1035,7 @@ class Api:
         :type user_context: Any, optional
         :raises HTTPError:
         """
-        payload: Dict = {"username": username, "password": password}
-        if user_context:
-            payload += {"userContext": user_context}
-        post_payload = dumps(payload, default=vars)
-        self.logger.debug(f"POST request body: {dumps(post_payload)}")
-
-        result = self._call_post("login", data=post_payload)
-
-        self.user = username
-        self.auth = password
-        self.key = result.data
-        self.login_timestamp = datetime.now()
-        self.headers.update({"X-Auth-Token": self.key})
+        raise DeprecationWarning("As of Feburary 2025, the API login via password is no longer supported.")
 
     def login_app_guest(self, application_token: str, user_token: str):
         """
