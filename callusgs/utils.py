@@ -105,7 +105,7 @@ def report_usgs_messages(messages) -> None:
         if not isinstance(message, dict):
             continue
         report_logger.warning(
-            f"USGS at {message['dateUpdated']} with severity '{message['severityText']}': {message['messageContent'].rstrip()}"
+            f"USGS at {message['dateUpdated']} with severity '{message['severityText']}': {message['messageContent'].rstrip().replace("<br>", "")}"
         )
 
 
