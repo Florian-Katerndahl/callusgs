@@ -55,6 +55,9 @@ parent_parser.add_argument(
 
 subparsers = parent_parser.add_subparsers(required=True)
 
+###############################################################################
+#  REPORT SUBPARSER
+###############################################################################
 report_parser = subparsers.add_parser(
     "report",
     help="Report help",
@@ -62,6 +65,9 @@ report_parser = subparsers.add_parser(
 )
 report_parser.set_defaults(func=exit)
 
+###############################################################################
+#  DOWNLOAD SUBPARSER
+###############################################################################
 download_parser = subparsers.add_parser(
     "download",
     help="Download help",
@@ -189,6 +195,9 @@ download_parser.add_argument(
     "May not exist prior to program invocation",
 )
 
+###############################################################################
+#  GEOCODE SUBPARSER
+###############################################################################
 geocode_parser = subparsers.add_parser(
     "geocode",
     help="Query the USGS Geocoder.",
@@ -207,6 +216,9 @@ geocode_parser.add_argument(
 )
 geocode_parser.add_argument("name", type=str, help="Name of the feature")
 
+###############################################################################
+#  GRID2LL SUBPARSER
+###############################################################################
 grid2ll_parser = subparsers.add_parser(
     "grid2ll",
     help="Translate between known grids and coordinates.",
@@ -238,6 +250,9 @@ grid2ll_parser.add_argument(
     "Coordinate pairs must be given as X1,Y1 X2,Y2 ...",
 )
 
+###############################################################################
+#  CLEAN SUBPARSER
+###############################################################################
 clean_parser = subparsers.add_parser(
     "clean",
     help="",
