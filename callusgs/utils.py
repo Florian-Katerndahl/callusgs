@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 import re
 import requests
+import os
 
 import fiona
 
@@ -245,3 +246,7 @@ def determine_log_level(verbose: bool, very_verbose: bool) -> int:
     """    
     info_or_warn: int = logging.INFO if verbose else logging.WARNING
     return logging.DEBUG if very_verbose else info_or_warn
+
+
+def get_auth_from_environment() -> Tuple[str]:
+    return os.environ.get("USGS_USERNAME"), os.environ.get("USGS_AUTH")

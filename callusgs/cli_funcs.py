@@ -25,7 +25,8 @@ from callusgs.utils import (
     product_is_dem,
     get_citation,
     cleanup_and_exit,
-    determine_log_level
+    determine_log_level,
+    get_auth_from_environment
 )
 from callusgs import ExitCodes
 from callusgs.storage import PersistentMetadata
@@ -53,9 +54,13 @@ def download(args: Namespace):
 
     download_logger.debug(f"CLI tool started with the following args: {vars(args)}")
 
+    if args.username is not None and args.auth is not None:
+        args.username, args.auth = get_auth_from_environment()
+
+    # can still be None if environment variables are not set
     assert (
         args.username is not None and args.auth is not None
-    ), "Username and/or Authentication key (e.g. password, token) not specified"
+    ), "Username and Authentication key (e.g. password, token) not specified"
     assert (
         args.cloudcover[0] >= 0
         and args.cloudcover[1] <= 100
@@ -478,6 +483,9 @@ def geocode(args: Namespace):
     for handler in logging.root.handlers:
         handler.addFilter(logging.Filter("callusgs"))
         handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
+    
+    if args.username is not None and args.auth is not None:
+        args.username, args.auth = get_auth_from_environment()
 
     with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
         report_usgs_messages(ee_session.notifications("M2M").data)
@@ -495,6 +503,9 @@ def grid2ll(args: Namespace):
     for handler in logging.root.handlers:
         handler.addFilter(logging.Filter("callusgs"))
         handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
+    
+    if args.username is not None and args.auth is not None:
+        args.username, args.auth = get_auth_from_environment()
 
     accumulated_output: List = []
 
@@ -521,6 +532,9 @@ def clean(args: Namespace):
     for handler in logging.root.handlers:
         handler.addFilter(logging.Filter("callusgs"))
         handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
+
+    if args.username is not None and args.auth is not None:
+        args.username, args.auth = get_auth_from_environment()
 
     with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
         searched_labels = ee_session.download_labels()

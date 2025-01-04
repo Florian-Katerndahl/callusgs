@@ -4,7 +4,6 @@ This module is called when executing the 'callusgs' command after installing cal
 
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from pathlib import Path
-from os import environ
 
 from callusgs.cli_funcs import download, geocode, grid2ll, clean
 
@@ -22,13 +21,13 @@ parent_parser.add_argument(
 )
 parent_parser.add_argument(
     "--username",
-    default=environ.get("USGS_USERNAME"),
+    default=None,
     type=str,
     help="Username to use for authentication",
 )
 parent_parser.add_argument(
     "--auth",
-    default=environ.get("USGS_AUTH"),
+    default=None,
     type=str,
     help="Appropriate authentication key (e.g. password, app token, etc.)",
 )
