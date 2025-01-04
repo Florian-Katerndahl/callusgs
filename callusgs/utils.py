@@ -180,9 +180,9 @@ def get_user_rate_limits(connection: Api) -> Tuple[int]:
     )
 
 
-def product_is_dem(product: str) -> bool:
-    dem_pattern: re.Pattern = re.compile(r"^gmted2010")
-    if dem_pattern.search(product):
+def product_is_gmted(product: str) -> bool:
+    gmted_pattern: re.Pattern = re.compile(r"^gmted2010")
+    if gmted_pattern.search(product):
         return True
     return False
 
@@ -192,6 +192,17 @@ def product_is_landsat(product: str) -> bool:
     if ls_pattern.search(product):
         return True
     return False
+
+
+def product_is_srtm(product: str) -> bool:
+    srtm_pattern: re.Pattern = re.compile(r"^srtm")
+    if srtm_pattern.search(product):
+        return True
+    return False
+
+
+def product_is_dem(product: str) -> bool:
+    return product_is_gmted(product) or product_is_srtm(product)
 
 
 def get_citation(doi_url: str) -> str:

@@ -32,6 +32,10 @@ Currently supported products for download are:
 | `landsat_dswe_tile_c2` | Landsat Dynamic Surface Water Extent |
 | `landsat_fsca_tile_c2` | Landsat Fractional Snow Covered Area |
 | `gmted2010`            | GMTED 2010 DEM                       |
+| `srtm`                 | SRTM Non-Void Filled                 |
+| `srtm_v2`              | SRTM Void Filled                     |
+| `srtm_v3`              | SRTM 1 Arc-Second Global             |
+| `srtm_water_bodies`    | SRTM Water Body Data                 |
 
 ## Installation
 

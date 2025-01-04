@@ -19,8 +19,10 @@ from callusgs.utils import (
     downloadable_and_preparing_scenes,
     singular_download,
     get_user_rate_limits,
-    product_is_dem,
+    product_is_gmted,
     product_is_landsat,
+    product_is_srtm,
+    product_is_dem,
     get_citation,
     cleanup_and_exit,
     determine_log_level
@@ -243,7 +245,9 @@ def download(args: Namespace):
                 product_is_landsat(args.product)
                 and "Product Bundle" in i["productName"]
             ) or (
-                product_is_dem(args.product) and args.dem_resolution in i["productName"]
+                product_is_gmted(args.product) and args.dem_resolution in i["productName"]
+            ) or (
+                product_is_srtm(args.product) and i["productName"].startswith("GeoTIFF")
             ):
                 available_downloads.append((i["entityId"], i["id"]))
                 total_size += i["filesize"]
@@ -318,14 +322,19 @@ def download(args: Namespace):
         download_logger.debug("Searched downloads: %s", json.dumps(download_search_response.data, indent=2))
         for order in download_search_response.data:
             if (
-                ((
-                    product_is_landsat(args.product)
-                    and "Product Bundle" in i["productName"]
+                (
+                    (
+                        product_is_landsat(args.product)
+                        and "Product Bundle" in i["productName"]
                 )
                 or (
-                    product_is_dem(args.product)
-                    and args.dem_resolution in i["productName"]
-                ))
+                        product_is_gmted(args.product)
+                        and args.dem_resolution in i["productName"]
+                )
+                or (
+                        product_is_srtm(args.product) and i["productName"].startswith("GeoTIFF")
+                )
+                )
                 and order["statusText"] == "Ordered"
             ):
                 download_logger.error(
@@ -354,8 +363,11 @@ def download(args: Namespace):
                     and "Product Bundle" in i["productName"]
                 )
                 or (
-                    product_is_dem(args.product)
+                    product_is_gmted(args.product)
                     and args.dem_resolution in i["productName"]
+                )
+                or (
+                    product_is_srtm(args.product) and i["productName"].startswith("GeoTIFF")
                 )
             ]
         )
@@ -397,8 +409,11 @@ def download(args: Namespace):
                             and "Product Bundle" in i["productName"]
                         )
                         or (
-                            product_is_dem(args.product)
+                            product_is_gmted(args.product)
                             and args.dem_resolution in i["productName"]
+                        )
+                        or (
+                            product_is_srtm(args.product) and i["productName"].startswith("GeoTIFF")
                         )
                     ],
                     ueids,

@@ -158,6 +158,10 @@ download_parser.add_argument(
         "landsat_dswe_tile_c2",
         "landsat_fsca_tile_c2",
         "gmted2010",
+        "srtm",
+        "srtm_v2",
+        "srtm_v3",
+        "srtm_water_bodies",
     ],
     required=True,
     help="Data product to query. For product name 'translations', "
@@ -168,7 +172,7 @@ download_parser.add_argument(
     type=str,
     choices=["7.5", "15", "30"],
     default="7.5",
-    help="Resoltuion for Digital Elevation Model",
+    help="Resoltuion for GMTED Digital Elevation Model",
 )
 
 download_parser.add_argument(
