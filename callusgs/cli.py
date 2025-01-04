@@ -61,7 +61,6 @@ subparsers = parent_parser.add_subparsers(required=True)
 report_parser = subparsers.add_parser(
     "report",
     help="Report help",
-    epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>",
 )
 report_parser.set_defaults(func=exit)
 
@@ -73,7 +72,6 @@ download_parser = subparsers.add_parser(
     help="Download help",
     description="",
     formatter_class=ArgumentDefaultsHelpFormatter,
-    epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>",
 )
 download_parser.set_defaults(func=download)
 download_parser.add_argument(
@@ -203,7 +201,6 @@ geocode_parser = subparsers.add_parser(
     help="Query the USGS Geocoder.",
     description="Query the USGS Geocoder.",
     formatter_class=ArgumentDefaultsHelpFormatter,
-    epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>",
 )
 geocode_parser.set_defaults(func=geocode)
 geocode_parser.add_argument(
@@ -224,7 +221,6 @@ grid2ll_parser = subparsers.add_parser(
     help="Translate between known grids and coordinates.",
     description="Translate between known grids and coordinates.",
     formatter_class=ArgumentDefaultsHelpFormatter,
-    epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>",
 )
 grid2ll_parser.set_defaults(func=grid2ll)
 grid2ll_parser.add_argument(
@@ -258,7 +254,6 @@ clean_parser = subparsers.add_parser(
     help="",
     description="",
     formatter_class=ArgumentDefaultsHelpFormatter,
-    epilog="Copyright: Florian Katerndahl <florian@katerndahl.com>",
 )
 clean_parser.set_defaults(func=clean)
 
