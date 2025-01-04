@@ -40,6 +40,7 @@ api_logger = logging.getLogger("callusgs.api")
 
 
 class Api:
+    DATA_SECTION: str = "Value of data section is not 1"
     ENDPOINT: str = "https://m2m.cr.usgs.gov/api/api/json/stable/"
 
     def __init__(
@@ -327,7 +328,7 @@ class Api:
         result = self._call_post("dataset-clear-customization", data=post_payload)
 
         if result.data != 1:
-            raise GeneralEarthExplorerException("Value of data section is not 1")
+            raise GeneralEarthExplorerException(Api.DATA_SECTION)
 
     def dataset_coverage(self, dataset_name: str) -> ApiResponse:
         """
@@ -620,7 +621,7 @@ class Api:
         result = self._call_post("dataset-set-customization", data=post_payload)
 
         if result.data != 1:
-            raise GeneralEarthExplorerException("Value of data section is not 1")
+            raise GeneralEarthExplorerException(Api.DATA_SECTION)
 
     def dataset_set_customizations(
         self, dataset_customization: DatasetCustomization
@@ -639,7 +640,7 @@ class Api:
         result = self._call_post("dataset-set-customizations", data=post_payload)
 
         if result.data != 1:
-            raise GeneralEarthExplorerException("Value of data section is not 1")
+            raise GeneralEarthExplorerException(Api.DATA_SECTION)
 
     def download_complete_proxied(
         self, proxied_downloads: List[ProxiedDownload]
@@ -799,7 +800,7 @@ class Api:
     def download_request(
         self,
         configuration_code: Optional[
-            Literal["no_data", "test", "order", "order+email", "null"]
+            Literal["no_data", "test", "order", "order+email"]
         ] = None,
         download_application: Optional[str] = "M2M",
         downloads: Optional[List[DownloadInput]] = None,
@@ -835,8 +836,11 @@ class Api:
 
         .. warning:: This method is only documented and accessible when having the MACHINE role assigned to your account.
 
+        .. note:: The `configuration_code` parameter is seemingly related to the Bulk Download System, at least when set
+          to either "order" or "order+email". Setting to "None" is recommended!
+
         :param configuration_code: Used to customize the the download routine, primarily for testing, defaults to None
-        :type configuration_code: Optional[Literal["no_data", "test", "order", "order+email", "null"]], optional
+        :type configuration_code: Optional[Literal["no_data", "test", "order", "order+email"]], optional
         :param download_application: Used to denote the application that will perform the download. Internal use only!, defaults to "M2M"
         :type download_application: Optional[str], optional
         :param downloads: Used to identify higher level products that this data may be used to create, defaults to None

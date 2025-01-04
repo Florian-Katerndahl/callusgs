@@ -110,16 +110,6 @@ def report_usgs_messages(messages) -> None:
 
 
 def downloadable_and_preparing_scenes(data, available_entities=None):
-    """
-    _summary_
-
-    :param data: _description_
-    :type data: _type_
-    :param available_entities: _description_, defaults to None
-    :type available_entities: _type_, optional
-    :return: _description_
-    :rtype: _type_
-    """
     ueids = available_entities or set()
     preparing_ueids = set()
     download_dict = {}
@@ -176,7 +166,7 @@ def singular_download(download_item: Dict, connection: Api, outdir: Path) -> Non
     return k
 
 
-def get_user_rate_limits(connection: Api) -> List[int]:
+def get_user_rate_limits(connection: Api) -> Tuple[int]:
     rate_limit_results = connection.rate_limit_summary()
     user_limits = [
         i
@@ -203,8 +193,44 @@ def product_is_landsat(product: str) -> bool:
         return True
     return False
 
-def get_citation(dataset_doi: str) -> str:
-    bib_response = requests.get(dataset_doi, headers={"Accept": "application/x-bibtex"})
+
+def get_citation(doi_url: str) -> str:
+    """
+    Query doi.org webserver in order to retrieve complete bibtex entry
+
+    .. note:: In general, the webserver queried does not matter. However,
+      only objects of type ``application/x-bibtex`` are accepted.
+
+    .. note:: The encoding is hardcoded to UTF-8.
+
+    :param doi_url: URL to query (e.g. "https://doi.org/10.5066/P9IAXOVV")
+    :type doi_url: str
+    :return: Bibtex entry, possibly formatted.
+    :rtype: str
+    """    
+    bib_response = requests.get(doi_url, headers={"Accept": "application/x-bibtex"})
     bib_response.encoding = "utf-8"
 
     return bib_response.text
+
+
+def cleanup_and_exit(connection: Api, label: str) -> None:
+    connection.download_order_remove(label=label)
+    utils_logger.debug(f"Removed order {label}")
+    
+    exit(0)
+
+
+def determine_log_level(verbose: bool, very_verbose: bool) -> int:
+    """
+    Determine the appropriate log level given user input
+
+    :param verbose: User requested verbose output (info)
+    :type verbose: bool
+    :param very_verbose: User requested verbose output (debug)
+    :type very_verbose: bool
+    :return: Log level enum of logging library
+    :rtype: int
+    """    
+    info_or_warn: int = logging.INFO if verbose else logging.WARNING
+    return logging.DEBUG if very_verbose else info_or_warn

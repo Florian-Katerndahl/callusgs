@@ -170,6 +170,15 @@ download_parser.add_argument(
     default="7.5",
     help="Resoltuion for Digital Elevation Model",
 )
+
+download_parser.add_argument(
+    "--database",
+    type=Path,
+    default=None,
+    help="Optional Database in which metadata about scenes and their download link are stored. "
+    "Note that setting this option does not actually download any data.",
+)
+
 download_parser.add_argument(
     "outdir",
     type=Path,

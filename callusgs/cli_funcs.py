@@ -6,6 +6,7 @@ from itertools import islice
 import json
 from functools import partial
 from typing import List
+from pathlib import Path
 
 from tqdm.contrib.concurrent import thread_map
 
@@ -20,9 +21,12 @@ from callusgs.utils import (
     get_user_rate_limits,
     product_is_dem,
     product_is_landsat,
-    get_citation
+    get_citation,
+    cleanup_and_exit,
+    determine_log_level
 )
 from callusgs import ExitCodes
+from callusgs.storage import PersistentMetadata
 
 api_logger = logging.getLogger("callusgs")
 
@@ -38,20 +42,12 @@ def download(args: Namespace):
     """
     download_logger = logging.getLogger("callusgs.download")
     logging.basicConfig(
-        level=(
-            logging.DEBUG
-            if args.very_verbose
-            else logging.INFO if args.verbose else logging.WARNING
-        ),
+        level=determine_log_level(args.verbose, args.very_verbose),
         format="%(asctime)s [%(name)s %(levelname)s]: %(message)s",
     )
     for handler in logging.root.handlers:
         handler.addFilter(logging.Filter("callusgs"))
-        handler.setLevel(
-            logging.DEBUG
-            if args.very_verbose
-            else logging.INFO if args.verbose else logging.WARNING
-        )
+        handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
 
     download_logger.debug(f"CLI tool started with the following args: {vars(args)}")
 
@@ -260,13 +256,22 @@ def download(args: Namespace):
             f"Total size to download is {total_size * BYTES_TO_GB:.2f} Gb"
         )
 
+        if args.database and product_is_landsat(args.product):
+            download_logger.info("Saving metadata to database")
+            pmd = PersistentMetadata(args.database)
+            pmd.connect_database()
+            pmd.create_metadata_table()
+            for scene in available_downloads:
+                res = ee_session.scene_metadata(args.product, scene, metadata_type="full")
+                pmd.write_scene_metadata(res.data[0]["metadata"], None)
+
+            pmd.disconnect_database()
+
         if args.dry_run:
             download_logger.info("Not performing download as dry run was requested.")
 
             ## and now delete the label (i.e. remove order from download queue)
-            ee_session.download_order_remove(label=download_label)
-            download_logger.debug(f"Removed order {download_label}")
-            exit(ExitCodes.E_OK.value)
+            cleanup_and_exit(ee_session, download_label)
 
         _, pending_download_limit, unattempted_download_limit = get_user_rate_limits(
             ee_session
@@ -277,15 +282,18 @@ def download(args: Namespace):
                 "Please re-start the query with tighter search bounds (e.g. shorter date range)."
                 "In case this error persists, clean your download queue via `callusgs clean`."
             )
-            exit(ExitCodes.E_RATELIMIT)
+            exit(ExitCodes.E_RATELIMIT.value)
 
-        ## use download-request to request products and set a label
+        # use download-request to request products and set a label
+        # as per private mail communication, the configuration_code can be set to None,
+        #  otherwise we tap into the bulk downloading system it seems
         requested_downloads = ee_session.download_request(
-            "order", downloads=downloads_to_request, label=download_label
+            downloads=downloads_to_request, label=download_label
         )
         download_logger.info(
             f"Request {requested_downloads.request_id} in session {requested_downloads.session_id}: Requested downloads for available scenes"
         )
+        download_logger.debug("Requested downloads: %s", json.dumps(requested_downloads.data, indent=2))
         if (
             requested_downloads.data["numInvalidScenes"]
             and not requested_downloads.data["availableDownloads"]
@@ -296,31 +304,36 @@ def download(args: Namespace):
             download_logger.error("Order failed due to unknown error. Aborting.")
             download_logger.debug(json.dumps(requested_downloads.data, indent=2))
             exit(ExitCodes.E_UNKNOWN.value)
+        if requested_downloads.data["failed"]:
+            download_logger.error("Some orders failed. See debug output.")
+            download_logger.debug(json.dumps(requested_downloads.data["failed"], indent=2))
 
-        ## check if all scenes are in ordered status. If so, exit the program
+        ## check if any scene is in "ordered" status. If so, exit the program
         download_search_response = ee_session.download_search(
             active_only=False, label=download_label, download_application="M2M"
         )
         download_logger.info(
             f"Request {download_search_response.request_id} in session {download_search_response.session_id}: Queried all downloads within queue"
         )
+        download_logger.debug("Searched downloads: %s", json.dumps(download_search_response.data, indent=2))
         for order in download_search_response.data:
             if (
-                (
+                ((
                     product_is_landsat(args.product)
                     and "Product Bundle" in i["productName"]
                 )
                 or (
                     product_is_dem(args.product)
                     and args.dem_resolution in i["productName"]
-                )
+                ))
                 and order["statusText"] == "Ordered"
             ):
                 download_logger.error(
                     "At least one scenes is in 'Ordered' status, only attempting complete orders. "
                     "Please try again later"
                 )
-                exit(ExitCodes.E_ORDERINCOMPLETE)
+                download_logger.debug("Offending scene: %s", json.dumps(order, indent=2))
+                cleanup_and_exit(ee_session, download_label)
 
         ## use download-retrieve to retrieve products, regardless of their status (can be checked to if looping over requested downloads is needed)
         ueids = set()
@@ -330,6 +343,7 @@ def download(args: Namespace):
         download_logger.info(
             f"Request {retrieved_downloads.request_id} in session {retrieved_downloads.session_id}: Retrieved download queue"
         )
+        download_logger.debug("Retrieved downloads: %s", json.dumps(retrieved_downloads.data, indent=2))
         ueids, download_dict, preparing_ueids = downloadable_and_preparing_scenes(
             [
                 i
@@ -397,6 +411,18 @@ def download(args: Namespace):
             entities
         ), "Ok, now I'm curious how you got here"
 
+        if args.database and product_is_landsat(args.product):
+            download_logger.info("Saving download URLs to database")
+            pmd = PersistentMetadata(args.database)
+            pmd.connect_database()
+            pmd.create_metadata_table()
+            for scene in download_dict.values():
+                pmd.set_download_link(scene["entityId"], scene["url"])
+
+            pmd.disconnect_database()
+            download_logger.info("Exiting after saving metadata")
+            cleanup_and_exit(ee_session, download_label)
+
         attempt = 0
         while download_dict and attempt <= 3:
             ## use download method to download files
@@ -430,20 +456,12 @@ def download(args: Namespace):
 def geocode(args: Namespace):
     geocode_logger = logging.getLogger("callusgs.geocode")
     logging.basicConfig(
-        level=(
-            logging.DEBUG
-            if args.very_verbose
-            else logging.INFO if args.verbose else logging.WARNING
-        ),
+        level=determine_log_level(args.verbose, args.very_verbose),
         format="%(asctime)s [%(name)s %(levelname)s]: %(message)s",
     )
     for handler in logging.root.handlers:
         handler.addFilter(logging.Filter("callusgs"))
-        handler.setLevel(
-            logging.DEBUG
-            if args.very_verbose
-            else logging.INFO if args.verbose else logging.WARNING
-        )
+        handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
 
     with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
         report_usgs_messages(ee_session.notifications("M2M").data)
@@ -455,20 +473,12 @@ def geocode(args: Namespace):
 def grid2ll(args: Namespace):
     grid2ll_logger = logging.getLogger("callusgs.grid2ll")
     logging.basicConfig(
-        level=(
-            logging.DEBUG
-            if args.very_verbose
-            else logging.INFO if args.verbose else logging.WARNING
-        ),
+        level=determine_log_level(args.verbose, args.very_verbose),
         format="%(asctime)s [%(name)s %(levelname)s]: %(message)s",
     )
     for handler in logging.root.handlers:
         handler.addFilter(logging.Filter("callusgs"))
-        handler.setLevel(
-            logging.DEBUG
-            if args.very_verbose
-            else logging.INFO if args.verbose else logging.WARNING
-        )
+        handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
 
     accumulated_output: List = []
 
@@ -489,20 +499,12 @@ def grid2ll(args: Namespace):
 def clean(args: Namespace):
     clean_logger = logging.getLogger("callusgs.clean")
     logging.basicConfig(
-        level=(
-            logging.DEBUG
-            if args.very_verbose
-            else logging.INFO if args.verbose else logging.WARNING
-        ),
+        level=determine_log_level(args.verbose, args.very_verbose),
         format="%(asctime)s [%(name)s %(levelname)s]: %(message)s",
     )
     for handler in logging.root.handlers:
         handler.addFilter(logging.Filter("callusgs"))
-        handler.setLevel(
-            logging.DEBUG
-            if args.very_verbose
-            else logging.INFO if args.verbose else logging.WARNING
-        )
+        handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
 
     with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
         searched_labels = ee_session.download_labels()
