@@ -446,6 +446,7 @@ def download(args: Namespace):
                 download_dict.items(),
                 max_workers=5,
                 desc="Total scenes downloaded",
+                unit="file",
             )
 
             for downloaded_scene in downloaded_scenes:
