@@ -1,7 +1,7 @@
 # callusgs
 
 [![Documentation Status](https://readthedocs.org/projects/callusgs/badge/?version=latest)](https://callusgs.readthedocs.io/en/latest/?badge=latest)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13351646.svg)](https://doi.org/10.5281/zenodo.13351646)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14598625.svg)](https://doi.org/10.5281/zenodo.14598625)
 [![FAIR checklist badge](https://fairsoftwarechecklist.net/badge.svg)](https://fairsoftwarechecklist.net/v0.2?f=31&a=32113&i=32101&r=133)
 
 
@@ -150,8 +150,8 @@ If you use this software, please use the bibtex entry below or refer to [the cit
 ```tex
 @software{Katerndahl2024,
 author = {Katerndahl, Florian},
-doi = {10.5281/zenodo.13351646},
-version = {v0.1.3},
+doi = {10.5281/zenodo.14598625},
+version = {v0.2.0},
 month = {8},
 title = {callusgs},
 url = {https://github.com/Florian-Katerndahl/callusgs},

@@ -15,8 +15,8 @@
 Home
 ====
 
-.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.13351646.svg
-   :target: https://doi.org/10.5281/zenodo.13351646
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.14598625.svg
+   :target: https://doi.org/10.5281/zenodo.14598625
    :alt: Package's DOI
 
 
@@ -120,8 +120,8 @@ A ready-to-use bibtex entry is listed below.
 
    @software{Katerndahl2024,
       author = {Katerndahl, Florian},
-      doi = {10.5281/zenodo.13351646},
-      version = {v0.1.3},
+      doi = {10.5281/zenodo.14598625},
+      version = {v0.2.0},
       month = {8},
       title = {callusgs},
       url = {https://github.com/Florian-Katerndahl/callusgs},
