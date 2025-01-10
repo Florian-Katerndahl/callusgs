@@ -50,7 +50,7 @@ sphinx-rtd-theme = "^2.0.0"
 sphinxcontrib-autoprogram = "^0.1.9"
 
 [tool.poetry.scripts]
-callusgs = "callusgs.cli:main"
+callusgs = "callusgs.cli.main:main"
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/Florian-Katerndahl/callusgs/issues"

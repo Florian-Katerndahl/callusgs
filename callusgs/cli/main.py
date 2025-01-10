@@ -5,7 +5,12 @@ This module is called when executing the 'callusgs' command after installing cal
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from pathlib import Path
 
-from callusgs.cli_funcs import download, geocode, grid2ll, clean
+from callusgs.cli import (
+    clean,
+    download,
+    geocode,
+    grid2ll,
+)
 
 parent_parser = ArgumentParser(
     prog="callusgs",

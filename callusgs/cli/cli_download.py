@@ -5,8 +5,6 @@ import logging
 from itertools import islice
 import json
 from functools import partial
-from typing import List
-from pathlib import Path
 
 from tqdm.contrib.concurrent import thread_map
 
@@ -35,7 +33,6 @@ api_logger = logging.getLogger("callusgs")
 
 BYTES_TO_GB = 9.3132257461548e-10
 
-
 def download(args: Namespace):
     """
     _summary_
@@ -54,7 +51,7 @@ def download(args: Namespace):
 
     download_logger.debug(f"CLI tool started with the following args: {vars(args)}")
 
-    if args.username is not None and args.auth is not None:
+    if args.username is None and args.auth is None:
         args.username, args.auth = get_auth_from_environment()
 
     # can still be None if environment variables are not set
@@ -472,79 +469,3 @@ def download(args: Namespace):
         download_logger.info(f"Removed order {download_label}")
 
     return ExitCodes.E_OK.value
-
-
-def geocode(args: Namespace):
-    geocode_logger = logging.getLogger("callusgs.geocode")
-    logging.basicConfig(
-        level=determine_log_level(args.verbose, args.very_verbose),
-        format="%(asctime)s [%(name)s %(levelname)s]: %(message)s",
-    )
-    for handler in logging.root.handlers:
-        handler.addFilter(logging.Filter("callusgs"))
-        handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
-    
-    if args.username is not None and args.auth is not None:
-        args.username, args.auth = get_auth_from_environment()
-
-    with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
-        report_usgs_messages(ee_session.notifications("M2M").data)
-        geocode_logger.info("Successfully connected to API endpoint")
-        geocode_response = ee_session.placename(args.feature, args.name)
-        print(geocode_response.data["results"] or "No results found!")
-
-
-def grid2ll(args: Namespace):
-    grid2ll_logger = logging.getLogger("callusgs.grid2ll")
-    logging.basicConfig(
-        level=determine_log_level(args.verbose, args.very_verbose),
-        format="%(asctime)s [%(name)s %(levelname)s]: %(message)s",
-    )
-    for handler in logging.root.handlers:
-        handler.addFilter(logging.Filter("callusgs"))
-        handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
-    
-    if args.username is not None and args.auth is not None:
-        args.username, args.auth = get_auth_from_environment()
-
-    accumulated_output: List = []
-
-    assert len(args.coordinates) > 0, "Must give at least one WRS coordinate pair"
-
-    with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
-        report_usgs_messages(ee_session.notifications("M2M").data)
-        grid2ll_logger.info("Successfully connected to API endpoint")
-        for path_row in args.coordinates:
-            grid_response = ee_session.grid2ll(
-                args.grid, args.response_shape, *path_row.split(",")
-            )
-            accumulated_output.append(grid_response.data)
-
-    print(accumulated_output)
-
-
-def clean(args: Namespace):
-    clean_logger = logging.getLogger("callusgs.clean")
-    logging.basicConfig(
-        level=determine_log_level(args.verbose, args.very_verbose),
-        format="%(asctime)s [%(name)s %(levelname)s]: %(message)s",
-    )
-    for handler in logging.root.handlers:
-        handler.addFilter(logging.Filter("callusgs"))
-        handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
-
-    if args.username is not None and args.auth is not None:
-        args.username, args.auth = get_auth_from_environment()
-
-    with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
-        searched_labels = ee_session.download_labels()
-        clean_logger.info(
-            f"Request {searched_labels.request_id} in session {searched_labels.session_id}: Retrieved download labels"
-        )
-        unique_labels = set()
-        for entry in searched_labels.data:
-            unique_labels.add(entry["label"])
-
-        for label in unique_labels:
-            ee_session.download_order_remove(label)
-            clean_logger.info(f"Deleted download order {label}")
