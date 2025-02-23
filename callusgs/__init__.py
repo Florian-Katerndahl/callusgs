@@ -4,6 +4,7 @@ import callusgs.errors as Errors
 from callusgs.utils import ogr2internal
 from callusgs.exits import ExitCodes
 from callusgs.storage import PersistentMetadata
+from callusgs.notifications import USGSNotificationParser
 
 __all__ = [
     "Api",
@@ -11,5 +12,6 @@ __all__ = [
     "Errors",
     "ogr2internal",
     "ExitCodes",
-    "PersistentMetadata"
+    "PersistentMetadata",
+    "USGSNotificationParser"
 ]

@@ -1,5 +1,5 @@
 from time import sleep
-from typing import Union, Tuple, List, Optional, Literal, Dict
+from typing import Union, Tuple, List, Optional, Literal, Dict, Set
 import logging
 from pathlib import Path
 import re
@@ -11,6 +11,7 @@ import fiona
 from callusgs import Api
 from callusgs.types import GeoJson, Coordinate
 from callusgs.errors import RateLimitEarthExplorerException
+from callusgs.notifications import USGSNotificationParser
 
 SECONDS_PER_MINUTE = 60
 
@@ -97,16 +98,23 @@ def month_names_to_index(month_list: List[str]) -> List[int]:
     return out_list
 
 
-def report_usgs_messages(messages) -> None:
-    report_logger = logging.getLogger("callusgs.utils.reporter")
+def report_usgs_messages(*messages) -> None:
     if not messages:
         return
 
+    report_logger = logging.getLogger("callusgs.utils.reporter")
+    message_set: Set[Tuple[str, str]] = set()
     for message in messages:
         if not isinstance(message, dict):
             continue
+        parser = USGSNotificationParser()
+        parser.feed(message['messageContent'])
+        parser.close()
+        message_set |= {(message['severityText'], str(parser)), }
+
+    for message in message_set:
         report_logger.warning(
-            f"USGS at {message['dateUpdated']} with severity '{message['severityText']}': {message['messageContent'].rstrip().replace("<br>", "")}"
+            f"USGS ({message[0]}): {message[1]}"
         )
 
 

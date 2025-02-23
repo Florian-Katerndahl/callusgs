@@ -153,9 +153,9 @@ def download(args: Namespace):
         user=args.username,
         auth=args.auth,
     ) as ee_session:
-        report_usgs_messages(ee_session.notifications("EE").data)
-        report_usgs_messages(ee_session.notifications("M2M").data)
         report_usgs_messages(
+            ee_session.notifications("EE").data,
+            ee_session.notifications("M2M").data,
             ee_session.dataset_messages("EE", dataset_name=args.product).data
         )
 
