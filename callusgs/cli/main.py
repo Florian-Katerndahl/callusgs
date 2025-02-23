@@ -4,6 +4,7 @@ This module is called when executing the 'callusgs' command after installing cal
 
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from pathlib import Path
+from importlib.metadata import version
 
 from callusgs.cli import (
     clean,
@@ -56,6 +57,12 @@ parent_parser.add_argument(
 )
 parent_parser.add_argument(
     "-d", "--dry-run", action="store_true", help="Do not perform action"
+)
+parent_parser.add_argument(
+    "--version",
+    action="version",
+    version="%(prog)s version " + version('callusgs'),
+    help="Print version information and exit.",
 )
 
 subparsers = parent_parser.add_subparsers(required=True)
