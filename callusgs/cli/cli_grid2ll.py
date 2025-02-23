@@ -7,6 +7,8 @@ from callusgs.utils import (
     determine_log_level,
     get_auth_from_environment
 )
+from callusgs.cli.validations import ValidateGrid2llArgs
+
 api_logger = logging.getLogger("callusgs")
 
 def grid2ll(args: Namespace):
@@ -22,10 +24,7 @@ def grid2ll(args: Namespace):
     if args.username is None and args.auth is None:
         args.username, args.auth = get_auth_from_environment()
 
-    # can still be None if environment variables are not set
-    assert (
-        args.username is not None and args.auth is not None
-    ), "Username and Authentication key (e.g. password, token) not specified"
+    ValidateGrid2llArgs(args).check()
 
     accumulated_output: List = []
 

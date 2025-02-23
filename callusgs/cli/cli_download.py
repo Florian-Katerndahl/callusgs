@@ -28,6 +28,7 @@ from callusgs.utils import (
 )
 from callusgs import ExitCodes
 from callusgs.storage import PersistentMetadata
+from callusgs.cli.validations import ValidateDownloadArgs
 
 api_logger = logging.getLogger("callusgs")
 
@@ -54,34 +55,7 @@ def download(args: Namespace):
     if args.username is None and args.auth is None:
         args.username, args.auth = get_auth_from_environment()
 
-    # can still be None if environment variables are not set
-    assert (
-        args.username is not None and args.auth is not None
-    ), "Username and Authentication key (e.g. password, token) not specified"
-    assert (
-        args.cloudcover[0] >= 0
-        and args.cloudcover[1] <= 100
-        and args.cloudcover[0] <= args.cloudcover[1]
-    ), "cloud cover must be from 0 to 100 and minimal cloud cover must be smaller or equal to upper bound"
-    assert datetime.strptime(args.date[0], "%Y-%m-%d") <= datetime.strptime(
-        args.date[1], "%Y-%m-%d"
-    ), "Start date must be earlier or on same day than end date"
-    assert (
-        args.aoi_coordinates is not None or args.aoi_file is not None
-    ), "Either coordinate list or file with AOI must be given"
-    if args.aoi_coordinates is not None:
-        assert (
-            len(args.aoi_coordinates) % 2
-        ) == 0, "Number of coordinates given must be even"
-        if len(args.aoi_coordinates) > 2:
-            assert (
-                args.aoi_coordinates[:2] == args.aoi_coordinates[-2:]
-            ), "Polygon ring must be closed"
-        else:
-            assert (
-                args.aoi_type != "Mbr"
-            ), "Point coordinate can't be used with Mbr AOI type"
-
+    ValidateDownloadArgs(args).check()
     download_logger.info("Passed preconditions")
 
     args.outdir.mkdir(parents=True, exist_ok=True)

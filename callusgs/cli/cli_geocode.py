@@ -6,6 +6,8 @@ from callusgs.utils import (
     determine_log_level,
     get_auth_from_environment
 )
+from callusgs.cli.validations import ValidateGeocodeArgs
+
 api_logger = logging.getLogger("callusgs")
 
 def geocode(args: Namespace):
@@ -21,10 +23,7 @@ def geocode(args: Namespace):
     if args.username is None and args.auth is None:
         args.username, args.auth = get_auth_from_environment()
 
-    # can still be None if environment variables are not set
-    assert (
-        args.username is not None and args.auth is not None
-    ), "Username and Authentication key (e.g. password, token) not specified"
+    ValidateGeocodeArgs(args).check()
 
     with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
         report_usgs_messages(ee_session.notifications("M2M").data)
