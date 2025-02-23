@@ -3,7 +3,7 @@
 User Guide
 ==========
 
-What should be added here???
+This chapter provides a brief overview of *gotchas* and things to watch out for when using ``callusgs``.
 
 .. _api_restrictions:
 
@@ -37,3 +37,13 @@ All Api methods of ``callUSGS`` that are only accessible when have the MACHINE r
 are marked the warning below:
 
 .. warning:: This method is only documented and accessible, when having the MACHINE role assigned to your account.
+
+.. _gotchas:
+
+Gotchas
+-------
+
+- Specifying coordinates on the command line instead of providing a file requries the use of ``--`` to
+  signal ``argparse`` the end of input
+- blocking download queue
+- ...
