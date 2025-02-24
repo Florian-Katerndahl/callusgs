@@ -147,7 +147,7 @@ def download(args: Namespace):
             download_logger.info(
                 f"Request {dataset_metadata.request_id} in session {dataset_metadata.session_id}: Got DOI"
             )
-            print(f"\n{get_citation(dataset_metadata.data["doiNumber"].strip())}")
+            print(f"\n{get_citation(dataset_metadata.data['doiNumber'].strip())}")
 
         # use scene-search to query scenes
         entities = []
@@ -415,7 +415,9 @@ def download(args: Namespace):
             cleanup_and_exit(ee_session, download_label)
 
         attempt = 0
+        attempted: bool = False
         while download_dict and attempt <= 3:
+            attempted = True
             ## use download method to download files
             downloaded_scenes = thread_map(
                 partial(singular_download, connection=ee_session, outdir=args.outdir),
@@ -437,6 +439,9 @@ def download(args: Namespace):
 
         if attempt >= 3:
             download_logger.error(f"{len(download_dict)} have not been downloaded")
+        
+        if not attempted:
+            download_logger.error("Did not attempt any downloads")
 
         ## and now delete the label (i.e. remove order from download queue)
         ee_session.download_order_remove(label=download_label)
