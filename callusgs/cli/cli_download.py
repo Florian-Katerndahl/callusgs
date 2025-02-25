@@ -24,7 +24,8 @@ from callusgs.utils import (
     cleanup_and_exit,
     determine_log_level,
     get_auth_from_environment,
-    construct_aoi
+    construct_aoi,
+    construct_filter
 )
 from callusgs import ExitCodes
 from callusgs.storage import PersistentMetadata
@@ -60,25 +61,7 @@ def download(args: Namespace):
 
     args.outdir.mkdir(parents=True, exist_ok=True)
 
-    coordinates: Union[Types.GeoJson, Tuple[Types.Coordinate]] = construct_aoi(args.aoi_coordinates, args.aoi_file, args.aoi_type)
-
-    scene_filter = Types.SceneFilter(
-        acquisition_filter=Types.AcquisitionFilter(*args.date),
-        cloudcover_filter=Types.CloudCoverFilter(
-            *args.cloudcover, args.include_unknown_clouds
-        ),
-        dataset_name=args.product,
-        ingest_filter=None,
-        metadata_filter=None,
-        seasonal_filter=(
-            None if "all" in args.months else month_names_to_index(args.months)
-        ),
-        spatial_filter=(
-            Types.SpatialFilterMbr(*coordinates)
-            if args.aoi_type == "Mbr"
-            else Types.SpatialFilterGeoJson(coordinates)
-        ),
-    )
+    scene_filter = construct_filter(args)
 
     if product_is_dem(args.product):
         # Reset parts of scene filter if DEM is requested

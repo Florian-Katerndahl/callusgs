@@ -1,3 +1,4 @@
+from argparse import Namespace
 from time import sleep
 from typing import Union, Tuple, List, Optional, Literal, Dict, Set, Iterable, TypeVar
 from itertools import islice
@@ -10,7 +11,7 @@ import os
 import fiona
 
 from callusgs import Api
-from callusgs.types import GeoJson, Coordinate
+from callusgs.types import GeoJson, Coordinate, SceneFilter, AcquisitionFilter, CloudCoverFilter, SpatialFilterMbr, SpatialFilterGeoJson
 from callusgs.errors import RateLimitEarthExplorerException
 from callusgs.notifications import USGSNotificationParser
 
@@ -301,3 +302,27 @@ def construct_aoi(aoi_coordinates: Optional[List[float]], aoi_path: Optional[Pat
         raise ValueError("Either aoi_coordinates or aoi_path must NOT be None")
     
     return coordinates
+
+
+def construct_filter(args: Namespace) -> SceneFilter:
+    coordinates: Union[GeoJson, Tuple[Coordinate]] = construct_aoi(args.aoi_coordinates, args.aoi_file, args.aoi_type)
+
+    s_filter: SceneFilter = SceneFilter(        
+        acquisition_filter=AcquisitionFilter(*args.date),
+        cloudcover_filter=CloudCoverFilter(
+            *args.cloudcover, args.include_unknown_clouds
+        ),
+        dataset_name=args.product,
+        ingest_filter=None,
+        metadata_filter=None,
+        seasonal_filter=(
+            None if "all" in args.months else month_names_to_index(args.months)
+        ),
+        spatial_filter=(
+            SpatialFilterMbr(*coordinates)
+            if args.aoi_type == "Mbr"
+            else SpatialFilterGeoJson(coordinates)
+        ),
+    )
+
+    return s_filter
