@@ -1,8 +1,7 @@
 from argparse import Namespace
-from datetime import datetime
 from time import sleep, time_ns
+from typing import Union, Tuple
 import logging
-from itertools import islice
 import json
 from functools import partial
 
@@ -11,9 +10,9 @@ from tqdm.contrib.concurrent import thread_map
 from callusgs import Api
 from callusgs import Types
 from callusgs.utils import (
-    ogr2internal,
     month_names_to_index,
     report_usgs_messages,
+    report_dataset_messages,
     downloadable_and_preparing_scenes,
     singular_download,
     get_user_rate_limits,
@@ -24,7 +23,8 @@ from callusgs.utils import (
     get_citation,
     cleanup_and_exit,
     determine_log_level,
-    get_auth_from_environment
+    get_auth_from_environment,
+    construct_aoi
 )
 from callusgs import ExitCodes
 from callusgs.storage import PersistentMetadata
@@ -60,40 +60,7 @@ def download(args: Namespace):
 
     args.outdir.mkdir(parents=True, exist_ok=True)
 
-    coordinates = None
-    if args.aoi_coordinates:
-        if len(args.aoi_coordinates) == 2:
-            coordinates = Types.GeoJson("Point", args.aoi_coordinates[::-1])
-        else:
-            coordinates = Types.GeoJson(
-                "Polygon",
-                [
-                    list(
-                        zip(
-                            islice(
-                                args.aoi_coordinates, 1, len(args.aoi_coordinates), 2
-                            ),
-                            islice(
-                                args.aoi_coordinates, 0, len(args.aoi_coordinates), 2
-                            ),
-                        )
-                    )
-                ],
-            )
-
-        if coordinates.type == "Polygon" and args.aoi_type == "Mbr":
-            coordinates = (
-                Types.Coordinate(
-                    min([lat for i in coordinates.coordinates for lon, lat in i]),
-                    min([lon for i in coordinates.coordinates for lon, lat in i]),
-                ),
-                Types.Coordinate(
-                    max([lat for i in coordinates.coordinates for lon, lat in i]),
-                    max([lon for i in coordinates.coordinates for lon, lat in i]),
-                ),
-            )
-    if args.aoi_file:
-        coordinates = ogr2internal(args.aoi_file, args.aoi_type)
+    coordinates: Union[Types.GeoJson, Tuple[Types.Coordinate]] = construct_aoi(args.aoi_coordinates, args.aoi_file, args.aoi_type)
 
     scene_filter = Types.SceneFilter(
         acquisition_filter=Types.AcquisitionFilter(*args.date),
@@ -130,6 +97,8 @@ def download(args: Namespace):
         report_usgs_messages(
             ee_session.notifications("EE").data,
             ee_session.notifications("M2M").data,
+        )
+        report_dataset_messages(
             ee_session.dataset_messages("EE", dataset_name=args.product).data
         )
 

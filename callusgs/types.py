@@ -3,7 +3,7 @@ Implementation of USGS's machine-to-machine API data types: https://m2m.cr.usgs.
 """
 
 from json import dumps
-from typing import List, Any, Union, Optional, Dict
+from typing import List, Any, Union, Optional, Dict, Tuple
 
 from callusgs.errors import ErrorCodes
 
@@ -134,6 +134,21 @@ class GeoJson(EarthExplorerBaseType):
         """
         self.type: str = type
         self.coordinates: Union[List[float], List[List[List[float]]]] = coordinates
+
+
+    def mbr(self) -> Tuple[Coordinate, Coordinate]:
+        if self.type != "Polygon":
+            raise RuntimeError("Cant get minimum bounding box of point")
+
+        lower_left: Coordinate = Coordinate(
+            min([lat for i in self.coordinates for lon, lat in i]),
+            min([lon for i in self.coordinates for lon, lat in i])
+        )
+        upper_right: Coordinate = Coordinate(
+            max([lat for i in self.coordinates for lon, lat in i]),
+            max([lon for i in self.coordinates for lon, lat in i])
+        )
+        return (lower_left, upper_right)
 
 
 class IngestUpdateTemplate(EarthExplorerBaseType):

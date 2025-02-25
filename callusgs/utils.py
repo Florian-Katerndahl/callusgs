@@ -1,5 +1,6 @@
 from time import sleep
-from typing import Union, Tuple, List, Optional, Literal, Dict, Set
+from typing import Union, Tuple, List, Optional, Literal, Dict, Set, Iterable, TypeVar
+from itertools import islice
 import logging
 from pathlib import Path
 import re
@@ -13,6 +14,7 @@ from callusgs.types import GeoJson, Coordinate
 from callusgs.errors import RateLimitEarthExplorerException
 from callusgs.notifications import USGSNotificationParser
 
+_T = TypeVar("_T")
 SECONDS_PER_MINUTE = 60
 
 utils_logger = logging.getLogger("callusgs.utils")
@@ -113,7 +115,13 @@ def report_usgs_messages(*messages) -> None:
         message_set |= {(message['severityText'], str(parser)), }
 
     for message in message_set:
-        report_logger.warning("USGS (%s): %s", message[0], message[1])
+        report_logger.warning("%s: %s", message[0], message[1])
+
+
+def report_dataset_messages(messages: Dict) -> None:
+    report_logger = logging.getLogger("callusgs.utils.reporter")
+    for id, message in messages.items():
+        report_logger.warning("%s", message["dataset-select"]["message"])
 
 
 def downloadable_and_preparing_scenes(data, available_entities=None):
@@ -256,3 +264,40 @@ def determine_log_level(verbose: bool, very_verbose: bool) -> int:
 
 def get_auth_from_environment() -> Tuple[str]:
     return os.environ.get("USGS_USERNAME"), os.environ.get("USGS_AUTH")
+
+
+def get_every_other(iter: Iterable[_T], start: int) -> List[_T]:
+    return list(islice(iter, start, len(iter), 2))
+
+
+def zip_lists(*lists: Iterable[_T]) -> List[_T]:
+    return list(zip(*lists))
+
+
+def pack_list(in_list: List[_T]) -> List[List[_T]]:
+    return [in_list]
+
+
+def construct_aoi(aoi_coordinates: Optional[List[float]], aoi_path: Optional[Path], aoi_type: str) -> Union[GeoJson, Tuple[Coordinate]]:
+    if aoi_coordinates:
+        if len(aoi_coordinates) == 2:
+            coordinates = GeoJson("Point", aoi_coordinates[::-1])
+        else:
+            coordinates = GeoJson(
+                "Polygon",
+                pack_list(
+                    zip_lists(
+                        get_every_other(aoi_coordinates, 1),
+                        get_every_other(aoi_coordinates, 0)
+                    )
+                )
+            )
+
+        if coordinates.type == "Polygon" and aoi_type == "Mbr":
+            coordinates = coordinates.mbr()
+    elif aoi_path:
+        coordinates = ogr2internal(aoi_path, aoi_type)
+    else:
+        raise ValueError("Either aoi_coordinates or aoi_path must NOT be None")
+    
+    return coordinates
