@@ -141,7 +141,7 @@ def download(args: Namespace):
                 "Either 'order' or 'downlaod' permission not present for user. "
                 "Did you request access to the M2M API from your ERS profile at 'https://ers.cr.usgs.gov/profile/access'?"
             )
-        
+
         if not args.no_cite:
             dataset_metadata = ee_session.dataset(dataset_name=args.product)
             download_logger.info("Request %d in session %d: Got DOI", dataset_metadata.request_id, dataset_metadata.session_id)
@@ -443,7 +443,7 @@ def download(args: Namespace):
 
         if attempt >= 3:
             download_logger.error("%d scenes have not been downloaded", len(download_dict))
-        
+
         if not attempted:
             download_logger.error("Did not attempt any downloads")
 

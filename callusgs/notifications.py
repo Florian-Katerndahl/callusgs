@@ -25,13 +25,13 @@ class USGSNotificationParser(HTMLParser):
         :type data: str
         """
         self.message.append(data.strip())
-    
+
     def __repr__(self) -> str:
         return " ".join(self.message)
-    
+
     def __str__(self) -> str:
         return self.__repr__()
-    
+
     def to_set(self) -> Set[str]:
         """
         Convert message to set with one entry (the parsed message).

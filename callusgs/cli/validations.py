@@ -4,7 +4,7 @@ the CLI applications. The seperation is done to reduce complexity of
 individual programs.
 """
 from argparse import Namespace
-from datetime.datetime import strptime
+from datetime import datetime
 
 class ValidateDownloadArgs:
     def __init__(self, args: Namespace) -> None:
@@ -24,7 +24,7 @@ class ValidateDownloadArgs:
 
 
     def check_dates(self) -> None:
-        if strptime(self.args.date[0], "%Y-%m-%d") > strptime(self.args.date[1], "%Y-%m-%d"):
+        if datetime.strptime(self.args.date[0], "%Y-%m-%d") > datetime.strptime(self.args.date[1], "%Y-%m-%d"):
             raise AssertionError("Start date must be earlier or on same day than end date")
 
 
@@ -46,7 +46,7 @@ class ValidateDownloadArgs:
         self.check_cloudcover()
         self.check_dates()
         self.check_coordinates()
-        
+
 
 class ValidateCleanArgs:
     def __init__(self, args: Namespace) -> None:
@@ -58,7 +58,7 @@ class ValidateCleanArgs:
             raise AssertionError("Username not specified")
         if self.args.auth is None:
             raise AssertionError("Authentication key (e.g. password, token) not specified")
-    
+
 
     def check(self) -> None:
         self.check_authentication()
@@ -74,7 +74,7 @@ class ValidateGeocodeArgs:
             raise AssertionError("Username not specified")
         if self.args.auth is None:
             raise AssertionError("Authentication key (e.g. password, token) not specified")
-    
+
 
     def check(self) -> None:
         self.check_authentication()
@@ -89,7 +89,7 @@ class ValidateGrid2llArgs:
             raise AssertionError("Username not specified")
         if self.args.auth is None:
             raise AssertionError("Authentication key (e.g. password, token) not specified")
-    
+
 
     def check(self) -> None:
         self.check_authentication()

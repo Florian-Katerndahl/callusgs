@@ -19,7 +19,7 @@ def geocode(args: Namespace):
     for handler in logging.root.handlers:
         handler.addFilter(logging.Filter("callusgs"))
         handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
-    
+
     if args.username is None and args.auth is None:
         args.username, args.auth = get_auth_from_environment()
 

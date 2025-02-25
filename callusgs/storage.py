@@ -205,7 +205,7 @@ class PersistentMetadata:
 
     def set_download_link(self, scene_identifier: str, link: str) -> None:
         assert self.__connection_established(), NO_CONNECTION_WARNING
-        
+
         self.cursor.execute(
             "UPDATE callusgs set link = ? WHERE landsat_scene_identifier = ?;",
             (link, scene_identifier)

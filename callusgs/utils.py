@@ -225,7 +225,7 @@ def get_citation(doi_url: str) -> str:
     :type doi_url: str
     :return: Bibtex entry, possibly formatted.
     :rtype: str
-    """    
+    """
     bib_response = requests.get(doi_url, headers={"Accept": "application/x-bibtex"})
     bib_response.encoding = "utf-8"
 
@@ -235,7 +235,7 @@ def get_citation(doi_url: str) -> str:
 def cleanup_and_exit(connection: Api, label: str) -> None:
     connection.download_order_remove(label=label)
     utils_logger.debug("Removed order %s", label)
-    
+
     exit(0)
 
 
@@ -249,7 +249,7 @@ def determine_log_level(verbose: bool, very_verbose: bool) -> int:
     :type very_verbose: bool
     :return: Log level enum of logging library
     :rtype: int
-    """    
+    """
     info_or_warn: int = logging.INFO if verbose else logging.WARNING
     return logging.DEBUG if very_verbose else info_or_warn
 
