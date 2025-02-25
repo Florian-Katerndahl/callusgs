@@ -195,9 +195,7 @@ def download(args: Namespace):
             len(entities) == initially_discovered_products
         ), "Whoops, some scenes went missing"
 
-        download_logger.debug(
-            f"Search filter: {json.dumps(scene_filter, default=vars)}"
-        )
+        download_logger.debug("Search filter: %s", json.dumps(scene_filter, default=vars, indent=2))
 
         download_label = str(time_ns())
         ## use download-options to get id which is needed for download together with entityId; only if product is marked as available and potentially secondary file groups set to true
@@ -206,7 +204,7 @@ def download(args: Namespace):
             args.product, entities, include_secondary_file_groups=True
         )
         download_logger.info(
-            f"Request {entity_download_options.request_id} in session {entity_download_options.session_id}: Requested download options"
+            "Request %d in session %d: Requested download options", entity_download_options.request_id, entity_download_options.session_id
         )
 
         available_downloads = []
@@ -230,9 +228,7 @@ def download(args: Namespace):
             Types.DownloadInput(*i, None, download_label) for i in available_downloads
         ]
 
-        download_logger.info(
-            f"Total size to download is {total_size * BYTES_TO_GB:.2f} Gb"
-        )
+        download_logger.info("Total size to download is %.2f Gb", total_size * BYTES_TO_GB)
 
         if args.database and product_is_landsat(args.product):
             download_logger.info("Saving metadata to database")
@@ -269,7 +265,9 @@ def download(args: Namespace):
             downloads=downloads_to_request, label=download_label
         )
         download_logger.info(
-            f"Request {requested_downloads.request_id} in session {requested_downloads.session_id}: Requested downloads for available scenes"
+            "Request %d in session %d: Requested downloads for available scenes",
+            requested_downloads.request_id,
+            requested_downloads.session_id
         )
         download_logger.debug("Requested downloads: %s", json.dumps(requested_downloads.data, indent=2))
         if (
@@ -291,7 +289,9 @@ def download(args: Namespace):
             active_only=False, label=download_label, download_application="M2M"
         )
         download_logger.info(
-            f"Request {download_search_response.request_id} in session {download_search_response.session_id}: Queried all downloads within queue"
+            "Request %d in session %d: Queried all downloads within queue",
+            download_search_response.request_id,
+            download_search_response.session_id
         )
         download_logger.debug("Searched downloads: %s", json.dumps(download_search_response.data, indent=2))
         for order in download_search_response.data:
@@ -324,7 +324,9 @@ def download(args: Namespace):
         download_dict = {}
         retrieved_downloads = ee_session.download_retrieve(label=download_label)
         download_logger.info(
-            f"Request {retrieved_downloads.request_id} in session {retrieved_downloads.session_id}: Retrieved download queue"
+            "Request %d in session %d: Retrieved download queue",
+            retrieved_downloads.request_id,
+            retrieved_downloads.session_id
         )
         download_logger.debug("Retrieved downloads: %s", json.dumps(retrieved_downloads.data, indent=2))
         ueids, download_dict, preparing_ueids = downloadable_and_preparing_scenes(
@@ -370,7 +372,9 @@ def download(args: Namespace):
             sleep(30)
             retrieved_downloads = ee_session.download_retrieve(label=download_label)
             download_logger.info(
-                f"Request {retrieved_downloads.request_id} in session {retrieved_downloads.session_id}: Retrieved download queue"
+                "Request %d in session %d: Retrieved download queue",
+                retrieved_downloads.request_id,
+                retrieved_downloads.session_id
             )
             ueids, new_download_dict, new_preparing_ueids = (
                 downloadable_and_preparing_scenes(
@@ -431,7 +435,9 @@ def download(args: Namespace):
             if download_dict:
                 attempt += 1
                 download_logger.info(
-                    f"Missing {len(download_dict)} scenes. Trying again in {30 * attempt} seconds"
+                    "Missing %d scenes. Trying again in %d seconds",
+                    len(download_dict),
+                    30 * attempt
                 )
                 sleep(30 * attempt)
 

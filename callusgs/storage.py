@@ -53,7 +53,7 @@ class PersistentMetadata:
         """
         if self.__connection_established():
             raise RuntimeError("Connection to database already established")
-        self.logger.debug(f"Creating database {self.db}")
+        self.logger.debug("Creating database %s", self.db)
         self.connection = sqlite3.connect(self.db)
         self.cursor = self.connection.cursor()
 
