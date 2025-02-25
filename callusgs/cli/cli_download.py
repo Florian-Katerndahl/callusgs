@@ -50,7 +50,7 @@ def download(args: Namespace):
         handler.addFilter(logging.Filter("callusgs"))
         handler.setLevel(determine_log_level(args.verbose, args.very_verbose))
 
-    download_logger.debug(f"CLI tool started with the following args: {vars(args)}")
+    download_logger.debug("CLI tool started with the following args: %s", vars(args))
 
     if args.username is None and args.auth is None:
         args.username, args.auth = get_auth_from_environment()
@@ -144,9 +144,7 @@ def download(args: Namespace):
         
         if not args.no_cite:
             dataset_metadata = ee_session.dataset(dataset_name=args.product)
-            download_logger.info(
-                f"Request {dataset_metadata.request_id} in session {dataset_metadata.session_id}: Got DOI"
-            )
+            download_logger.info("Request %d in session %d: Got DOI", dataset_metadata.request_id, dataset_metadata.session_id)
             print(f"\n{get_citation(dataset_metadata.data['doiNumber'].strip())}")
 
         # use scene-search to query scenes
@@ -157,8 +155,10 @@ def download(args: Namespace):
             include_null_metadata=True if product_is_dem(args.product) else False,
         )
         initially_discovered_products = scene_search_results.data["totalHits"]
-        download_logger.info(
-            f"Request {scene_search_results.request_id} in session {scene_search_results.session_id}: Found {initially_discovered_products} scenes for request"
+        download_logger.info("Request %d in session %d: Found %d scenes for request",
+            scene_search_results.request_id,
+            scene_search_results.session_id,
+            initially_discovered_products
         )
 
         if initially_discovered_products == 0:
@@ -189,9 +189,7 @@ def download(args: Namespace):
                 search_result["entityId"]
                 for search_result in scene_search_results.data["results"]
             )
-            download_logger.info(
-                f"Request {scene_search_results.request_id} in session {scene_search_results.session_id}: Walking over paged search results ({start_num}/{initially_discovered_products})"
-            )
+            download_logger.info("Request %d in session %d: Walking over paged search results (%d/%d)", scene_search_results.request_id, scene_search_results.session_id, start_num, initially_discovered_products)
 
         assert (
             len(entities) == initially_discovered_products
@@ -438,13 +436,13 @@ def download(args: Namespace):
                 sleep(30 * attempt)
 
         if attempt >= 3:
-            download_logger.error(f"{len(download_dict)} have not been downloaded")
+            download_logger.error("%d scenes have not been downloaded", len(download_dict))
         
         if not attempted:
             download_logger.error("Did not attempt any downloads")
 
         ## and now delete the label (i.e. remove order from download queue)
         ee_session.download_order_remove(label=download_label)
-        download_logger.info(f"Removed order {download_label}")
+        download_logger.info("Removed order %s", download_label)
 
     return ExitCodes.E_OK.value

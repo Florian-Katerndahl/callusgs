@@ -27,13 +27,11 @@ def clean(args: Namespace):
 
     with Api(method=args.auth_method, user=args.username, auth=args.auth) as ee_session:
         searched_labels = ee_session.download_labels()
-        clean_logger.info(
-            f"Request {searched_labels.request_id} in session {searched_labels.session_id}: Retrieved download labels"
-        )
+        clean_logger.info("Request %d in session %d: Retrieved download labels", searched_labels.request_id, searched_labels.session_id)
         unique_labels = set()
         for entry in searched_labels.data:
             unique_labels.add(entry["label"])
 
         for label in unique_labels:
             ee_session.download_order_remove(label)
-            clean_logger.info(f"Deleted download order {label}")
+            clean_logger.info("Deleted download order %s", label)

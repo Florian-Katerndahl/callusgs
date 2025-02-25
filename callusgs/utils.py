@@ -113,9 +113,7 @@ def report_usgs_messages(*messages) -> None:
         message_set |= {(message['severityText'], str(parser)), }
 
     for message in message_set:
-        report_logger.warning(
-            f"USGS ({message[0]}): {message[1]}"
-        )
+        report_logger.warning("USGS (%s): %s", message[0], message[1])
 
 
 def downloadable_and_preparing_scenes(data, available_entities=None):
@@ -170,7 +168,7 @@ def singular_download(download_item: Dict, connection: Api, outdir: Path) -> Non
             )
             sleep(15 * SECONDS_PER_MINUTE)
     except RuntimeError as e:
-        utils_logger.error(f"Failed to download {v['entityId']}: {e}")
+        utils_logger.error("Failed to download %s: %s", v["entityId"], e)
 
     return k
 
@@ -236,7 +234,7 @@ def get_citation(doi_url: str) -> str:
 
 def cleanup_and_exit(connection: Api, label: str) -> None:
     connection.download_order_remove(label=label)
-    utils_logger.debug(f"Removed order {label}")
+    utils_logger.debug("Removed order %s", label)
     
     exit(0)
 
